@@ -702,7 +702,7 @@ IDLE
 - 移动端触摸目标 ≥ 56 逻辑像素；不依赖 hover，点击/取消均可完成操作。
 - P1 移动端打磨重点：塔卡与建造位点击热区、技能瞄准、面板遮挡、横屏安全区。
 - 键盘：1–4 选塔，Q 技能，U 升级，S 卖出，F 速度，Space/Esc 暂停/关闭，Enter 开始下一波。
-- 设置中的“减少动态效果”通过 `SettingsData.reducedMotion` 控制 EffectsSystem、星云漂移和震屏。
+- 设置中的“减少动态效果”通过 `SettingsData.reducedMotion` 控制 EffectsSystem、星云漂移和震屏；“自动下一波”通过 `SettingsData.autoNextWave` 保存，准备阶段由真实时间倒计时触发 `startWave()`，暂停时不递减。
 - 文字与背景对比度 ≥ 4.5:1（主要 HUD 文本）；不使用颜色作为唯一状态编码。
 
 ---

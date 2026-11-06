@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: SettingsData = {
   reducedMotion: false,
   defaultSpeed: 1,
   volume: 0.5,
+  autoNextWave: false,
 };
 
 const DEFAULT_PROGRESS: ProgressData = {
@@ -82,6 +83,7 @@ function normalizeSettings(value: Partial<SettingsData> | null): SettingsData {
     reducedMotion: typeof value?.reducedMotion === 'boolean' ? value.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     defaultSpeed,
     volume,
+    autoNextWave: typeof value?.autoNextWave === 'boolean' ? value.autoNextWave : false,
   };
 }
 

@@ -14,19 +14,34 @@ describe('save fallback and progress', () => {
     expect(settings.reducedMotion).toBe(false);
     expect(settings.defaultSpeed).toBe(1);
     expect(settings.volume).toBe(0.5);
+    expect(settings.autoNextWave).toBe(false);
   });
 
   it('keeps settings in memory when storage is unavailable', () => {
-    const next = updateSettings({ soundEnabled: false, reducedMotion: true, defaultSpeed: 5, volume: 0.25 });
+    const next = updateSettings({
+      soundEnabled: false,
+      reducedMotion: true,
+      defaultSpeed: 5,
+      volume: 0.25,
+      autoNextWave: true,
+    });
     expect(next.soundEnabled).toBe(false);
     expect(next.reducedMotion).toBe(true);
     expect(next.defaultSpeed).toBe(5);
     expect(next.volume).toBe(0.25);
+    expect(next.autoNextWave).toBe(true);
     expect(loadSettings().soundEnabled).toBe(false);
     expect(loadSettings().defaultSpeed).toBe(5);
     expect(loadSettings().volume).toBe(0.25);
+    expect(loadSettings().autoNextWave).toBe(true);
     // Restore defaults for any subsequent test in this worker.
-    updateSettings({ soundEnabled: true, reducedMotion: false, defaultSpeed: 1, volume: 0.5 });
+    updateSettings({
+      soundEnabled: true,
+      reducedMotion: false,
+      defaultSpeed: 1,
+      volume: 0.5,
+      autoNextWave: false,
+    });
   });
 
   it('keeps the best score and accumulated kills', () => {

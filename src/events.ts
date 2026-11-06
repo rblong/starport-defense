@@ -27,6 +27,7 @@ export interface GameEventMap {
   'ui:cancelSkillAim': EmptyPayload;
   'ui:togglePause': EmptyPayload;
   'ui:setSpeed': { speed: Speed };
+  'ui:setAutoNextWave': { enabled: boolean };
   'ui:restart': EmptyPayload;
   'ui:quitMenu': EmptyPayload;
 
@@ -34,6 +35,7 @@ export interface GameEventMap {
   'game:mode': ModeSnapshot;
   'game:selection': TowerSelection | null;
   'game:skill': SkillStatus;
+  'game:autoNext': { active: boolean; remaining: number };
   'game:waveBanner': WaveBannerPayload;
   'game:toast': ToastPayload;
   'game:result': ResultPayload;

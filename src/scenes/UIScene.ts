@@ -33,6 +33,7 @@ import { Button } from '../ui/Button';
 import { TowerCard } from '../ui/TowerCard';
 import { sharpenSceneText } from '../ui/sharpenText';
 import { audio } from '../systems/audio';
+import { loadSettings, updateSettings } from '../systems/save';
 
 const TARGET_LABELS: Record<TargetMode, string> = {
   first: '最前',
@@ -111,7 +112,10 @@ export class UIScene extends Phaser.Scene {
   private pauseModal!: Phaser.GameObjects.Container;
   private pauseSoundButton!: Button;
   private pauseVolumeButton!: Button;
+  private pauseAutoNextButton!: Button;
   private pauseSoundLabel = '音效：开';
+  private autoNextEnabled = false;
+  private autoNextState: { active: boolean; remaining: number } = { active: false, remaining: 0 };
   private resultModal!: Phaser.GameObjects.Container;
   private resultTitle!: Phaser.GameObjects.Text;
   private resultSubtitle!: Phaser.GameObjects.Text;
@@ -143,6 +147,14 @@ export class UIScene extends Phaser.Scene {
   private readonly handleHud = (hud: HudSnapshot): void => {
     this.hud = hud;
     this.refreshHud();
+  };
+
+  private readonly handleAutoNext = (payload: { active: boolean; remaining: number }): void => {
+    this.autoNextState = payload;
+    if (this.mode.phase === 'prepare' && !this.pauseVisible && !this.resultVisible) {
+      const sub = payload.active ? `自动 ${Math.ceil(payload.remaining)}s` : 'ENTER';
+      this.startWaveButton.setLabel(`开始第 ${this.hud.wave} 波`, sub);
+    }
   };
 
   private readonly handleMode = (mode: ModeSnapshot): void => {
@@ -226,6 +238,8 @@ export class UIScene extends Phaser.Scene {
     this.cards = [];
     this.previewWave = null;
     this.portraitPauseShown = false;
+    this.autoNextEnabled = loadSettings().autoNextWave;
+    this.autoNextState = { active: false, remaining: 0 };
 
     this.buildHud();
     this.buildCommandBar();
@@ -252,6 +266,7 @@ export class UIScene extends Phaser.Scene {
     gameBus.on('game:mode', this.handleMode, this);
     gameBus.on('game:selection', this.handleSelection, this);
     gameBus.on('game:skill', this.handleSkill, this);
+    gameBus.on('game:autoNext', this.handleAutoNext, this);
     gameBus.on('game:waveBanner', this.handleWaveBanner, this);
     gameBus.on('game:toast', this.handleToast, this);
     gameBus.on('game:result', this.handleResult, this);
@@ -781,9 +796,9 @@ export class UIScene extends Phaser.Scene {
 
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.panel, 0.98);
-    panel.fillRoundedRect(400, 166, 480, 388, 14);
+    panel.fillRoundedRect(400, 166, 480, 428, 14);
     panel.lineStyle(1.5, COLORS.cyan, 0.55);
-    panel.strokeRoundedRect(400.5, 166.5, 479, 387, 14);
+    panel.strokeRoundedRect(400.5, 166.5, 479, 427, 14);
     this.pauseModal.add(panel);
 
     const title = this.add.text(640, 208, '已暂停', {
@@ -816,9 +831,9 @@ export class UIScene extends Phaser.Scene {
 
     const continueButton = new Button(this, {
       x: 490,
-      y: 314,
+      y: 306,
       width: 300,
-      height: 44,
+      height: 42,
       label: '继续行动',
       fontSize: 16,
       accent: COLORS.cyan,
@@ -828,7 +843,7 @@ export class UIScene extends Phaser.Scene {
 
     const restartButton = new Button(this, {
       x: 490,
-      y: 360,
+      y: 352,
       width: 300,
       height: 42,
       label: '重新开始',
@@ -841,7 +856,7 @@ export class UIScene extends Phaser.Scene {
     this.pauseSoundLabel = audio.isMuted() ? '音效：关' : '音效：开';
     this.pauseSoundButton = new Button(this, {
       x: 490,
-      y: 408,
+      y: 398,
       width: 300,
       height: 42,
       label: this.pauseSoundLabel,
@@ -853,7 +868,7 @@ export class UIScene extends Phaser.Scene {
 
     this.pauseVolumeButton = new Button(this, {
       x: 490,
-      y: 456,
+      y: 444,
       width: 300,
       height: 42,
       label: audio.getVolumeLabel(),
@@ -866,9 +881,21 @@ export class UIScene extends Phaser.Scene {
     });
     this.pauseModal.add(this.pauseVolumeButton.container);
 
+    this.pauseAutoNextButton = new Button(this, {
+      x: 490,
+      y: 490,
+      width: 300,
+      height: 42,
+      label: this.autoNextLabel(),
+      fontSize: 15,
+      accent: COLORS.magenta,
+      onClick: () => this.toggleAutoNext(),
+    });
+    this.pauseModal.add(this.pauseAutoNextButton.container);
+
     const menuButton = new Button(this, {
       x: 490,
-      y: 504,
+      y: 536,
       width: 300,
       height: 42,
       label: '返回主菜单',
@@ -877,6 +904,18 @@ export class UIScene extends Phaser.Scene {
       onClick: () => gameBus.emit('ui:quitMenu', {}),
     });
     this.pauseModal.add(menuButton.container);
+  }
+
+  private autoNextLabel(): string {
+    return this.autoNextEnabled ? '自动下一波：开' : '自动下一波：关';
+  }
+
+  private toggleAutoNext(): void {
+    this.autoNextEnabled = !this.autoNextEnabled;
+    updateSettings({ autoNextWave: this.autoNextEnabled });
+    this.pauseAutoNextButton.setLabel(this.autoNextLabel());
+    gameBus.emit('ui:setAutoNextWave', { enabled: this.autoNextEnabled });
+    audio.play('click');
   }
 
   private buildResultModal(): void {
@@ -986,7 +1025,8 @@ export class UIScene extends Phaser.Scene {
     const modePrefix = this.hud.endless ? '无尽 · ' : '';
     if (this.mode.phase === 'prepare') {
       this.startWaveButton.setEnabled(!this.pauseVisible && !this.resultVisible);
-      this.startWaveButton.setLabel(`开始第 ${this.hud.wave} 波`, 'ENTER');
+      const autoSub = this.autoNextState.active ? `自动 ${Math.ceil(this.autoNextState.remaining)}s` : 'ENTER';
+      this.startWaveButton.setLabel(`开始第 ${this.hud.wave} 波`, autoSub);
       this.waveStatusText.setText(`${modePrefix}准备阶段`).setColor(CSS_COLORS.cyan);
     } else if (this.mode.phase === 'wave') {
       this.startWaveButton.setEnabled(false);
@@ -1112,6 +1152,7 @@ export class UIScene extends Phaser.Scene {
     if (this.pauseVisible) {
       this.updatePauseStats();
       this.refreshSoundLabels();
+      this.pauseAutoNextButton?.setLabel(this.autoNextLabel());
     }
     this.pauseButton.setEnabled(
       this.mode.phase === 'prepare' || this.mode.phase === 'wave',
@@ -1122,7 +1163,7 @@ export class UIScene extends Phaser.Scene {
     const stats = this.pauseModal.getByName('pauseStats') as Phaser.GameObjects.Text | null;
     if (stats) {
       stats.setText(
-        `完整度 ${this.hud.integrity}/${this.hud.maxIntegrity}   信用点 ${this.hud.credits}   波次 ${this.hud.wave}/${this.hud.totalWaves}`,
+        `完整度 ${this.hud.integrity}/${this.hud.maxIntegrity}   信用点 ${this.hud.credits}   波次 ${this.hud.wave}/${this.hud.endless ? '∞' : this.hud.totalWaves}`,
       );
     }
   }

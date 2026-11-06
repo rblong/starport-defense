@@ -16,7 +16,7 @@
 - 1 张地图、12 波标准战役 + 无尽模式、4 座防御塔、5 类敌人 + 精英 + Boss；
 - 建塔、3 级升级、卖出、目标优先级切换；
 - 轨道轰炸主动技能；
-- 暂停/继续、1x–5x 速度、音效、音量、减少动态效果；
+- 暂停/继续、1x–5x 速度、音效、音量、减少动态效果、自动下一波；
 - 下一波敌人构成预览与清波奖励提示；
 - 胜利/失败结算、重开、返回主菜单；
 - 最佳成绩、最高波次与设置持久化；
@@ -84,6 +84,7 @@ npm run preview   # 预览 dist
 | `F` / 速度按钮循环 1x→5x | 通过（1→2→3→4→5→1，HUD 显示 5x，`speed-verification.json`） |
 | 无尽模式进入与第 13 波 | 通过（HUD 13/∞，生成 33 个敌人，hpScale 1.62，`endless-verification.json`） |
 | 清空第 13 波后继续第 14 波 | 通过（未触发胜利，回到准备阶段） |
+| 自动下一波 | 通过（暂停面板开启后清空第 1 波，倒计时 3s，随后自动进入第 2 波，`auto-next-verification.json`） |
 | 第 12 波 Boss 出现、顶部血条可见 | 通过（`虚空母舰`） |
 | 清空第 12 波全部敌人 | 通过真实波次完成路径触发胜利 |
 | 胜利结算 / 最佳成绩写入 | 通过（评分 6714，写入 localStorage） |
@@ -130,13 +131,16 @@ Headless 环境未限制渲染帧率，数值高于 60 fps 属正常；结果说
 - `artifacts/prod-sharpness.json`：生产构建 2x 渲染冒烟；
 - `artifacts/speed-verification.json`：1x–5x 速度循环与 5x 战斗检查；
 - `artifacts/endless-verification.json`：无尽模式进入、第 13 波生成/清空与第 14 波检查；
+- `artifacts/auto-next-verification.json`：暂停面板开启自动下一波、清波倒计时与自动开波检查；
 - `artifacts/screenshots/`：菜单、帮助、战斗、暂停、Boss、胜利、失败、移动端等截图。
 
 主要截图：
 
 | 场景 | 文件 |
 | --- | --- |
-| 主菜单（标准 / 无尽） | `artifacts/screenshots/57-menu-endless.png` |
+| 主菜单（标准 / 无尽） | `artifacts/screenshots/63-menu-auto-next.png` |
+| 暂停：自动下一波设置 | `artifacts/screenshots/64-pause-auto-next.png` |
+| 自动下一波倒计时 | `artifacts/screenshots/66-auto-next-countdown.png` |
 | 无尽模式下一波预览 | `artifacts/screenshots/59-endless-wave13-preview.png` |
 | 1920×1080 高分辨率界面 | `artifacts/screenshots/53-sharp-menu-1920.png` |
 | 帮助面板 | `artifacts/screenshots/41-final-help-v11.png` |
@@ -168,6 +172,7 @@ Headless 环境未限制渲染帧率，数值高于 60 fps 属正常；结果说
 | 高分辨率渲染 | 游戏相机设置为 2x zoom 并保持在 1280×720 逻辑坐标系；画布内部 2560×1440，文本纹理 resolution=2。鼠标坐标经 `camera.getWorldPoint` 转回逻辑坐标，避免 UI 热区偏移。 |
 | 速度档位 | 由 1x/2x 扩展为 1x–5x；F 键或 HUD 速度按钮循环切换，固定步长最多补 12 步/帧。 |
 | 无尽模式 | 标准 12 波之外新增主菜单入口；第 13 波起由 `getWaveForIndex()` 生成 4 套轮换编队，血量随波次增长，清波后继续而非结算胜利；最高波次/最佳成绩沿用本地存档。 |
+| 自动下一波 | 新增持久化设置；清波进入准备阶段后启动 3 秒真实时间倒计时，HUD 按钮显示剩余秒数，倒计时归零自动开波；手动开波或关闭设置会取消倒计时，暂停时倒计时冻结。 |
 | 中局存档 | 未实现，符合原方案非目标。 |
 
 ---

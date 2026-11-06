@@ -1,0 +1,47 @@
+{
+  "steps": [
+    {
+      "name": "menu-auto-default",
+      "auto": false,
+      "autoLabel": "自动下一波：关"
+    },
+    {
+      "name": "pause-auto-default",
+      "paused": true,
+      "auto": false,
+      "label": "自动下一波：关"
+    },
+    {
+      "name": "auto-enabled",
+      "auto": true,
+      "enabled": true,
+      "label": "自动下一波：开"
+    },
+    {
+      "name": "wave1",
+      "wave": 1,
+      "phase": "wave",
+      "auto": true,
+      "remaining": 0
+    },
+    {
+      "name": "countdown",
+      "phase": "prepare",
+      "wavesCleared": 1,
+      "remaining": 2.400000000000002,
+      "autoState": {
+        "active": true,
+        "remaining": 2.466680000000002
+      }
+    },
+    {
+      "name": "auto-started-wave2",
+      "phase": "wave",
+      "wave": 2,
+      "auto": true,
+      "remaining": 0,
+      "hudWave": 2
+    }
+  ],
+  "errors": []
+}

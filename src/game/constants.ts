@@ -33,6 +33,7 @@ export const SKILL_TELEGRAPH = 0.4;
 export const STEP_SEC = 1 / 60;
 export const MAX_STEPS_PER_FRAME = 12;
 export const MAX_FRAME_DELTA = 0.1;
+export const AUTO_NEXT_DELAY = 3;
 export const SPEED_LEVELS: readonly Speed[] = [1, 2, 3, 4, 5];
 export const ONE_SHOT_CHAIN_FALLOFF = 0.65;
 export const CHAIN_RADIUS = 110;

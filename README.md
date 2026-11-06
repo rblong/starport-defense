@@ -4,7 +4,7 @@
 
 > 在 12 波异星虫群的进攻中，用 4 类炮塔、升级与轨道轰炸，守住 NEXUS-7 星港的跃迁核心。
 
-![主菜单](artifacts/screenshots/57-menu-endless.png)
+![主菜单](artifacts/screenshots/63-menu-auto-next.png)
 
 ## 快速开始
 
@@ -35,11 +35,12 @@ npm run preview
 - **无尽模式**：标准 12 波战役之外，可从主菜单进入无限波；敌人数量与血量持续提高，冲击最高波次。
 - **操作与节奏**：鼠标/键盘建造；1x–5x 速度；暂停；波间准备不限时；波次中也可建造/升级/卖出。
 - **下一波预览**：准备阶段显示下一波敌人构成与清波奖励，开波后自动隐藏。
-- **设置**：音效开关、音量（100% / 75% / 50% / 25% / 0%）、减少动态效果；菜单与暂停面板均可调整，状态持久化。
+- **自动下一波**：可在主菜单或暂停面板开启；清波后 3 秒自动开下一波，准备阶段显示倒计时，也可点击按钮立即开始。
+- **设置**：音效开关、音量（100% / 75% / 50% / 25% / 0%）、减少动态效果、自动下一波；菜单与暂停面板均可调整，状态持久化。
 - **目标优先级**：每座塔可切换“最前 / 最强 / 最近”。
 - **反馈与表现**：程序化星空/星云、炮口与弹道、命中/爆炸粒子、漏怪红屏与震屏、Boss 血条、波次横幅、信用点飘字。
 - **全屏环境背景**：Phaser 画布保持 16:9，画布外的 letterbox 区域由独立 Canvas 星空层填充，页面整体更沉浸。
-- **存档**：最佳评分、最高波次、是否通关、音效与“减少动态效果”设置写入 `localStorage`；存储不可用时自动降级为内存状态。
+- **存档**：最佳评分、最高波次、是否通关、音效、“减少动态效果”与自动下一波设置写入 `localStorage`；存储不可用时自动降级为内存状态。
 - **音效**：Web Audio 合成，无外部音频文件；静音开关持久化。
 - **适配**：1280×720 等比缩放；移动端横屏可用（P1）；竖屏显示横屏提示，并自动暂停游戏。
 - **背景满屏**：非 16:9 窗口、手机横屏或超宽屏下，游戏画面保持 16:9 居中，两侧/上下由动态星空与星云背景铺满，无黑边、不拉伸、不裁切。
@@ -75,9 +76,9 @@ npm run preview
 | --- | --- |
 | ![手机横屏](artifacts/screenshots/46-bgfill-mobile-landscape.png) | ![超宽屏](artifacts/screenshots/47-bgfill-ultrawide.png) |
 
-| 1920×1080：2x 内部渲染 | 无尽模式：下一波预览 |
+| 1920×1080：2x 内部渲染 | 自动下一波倒计时 |
 | --- | --- |
-| ![高分辨率游戏](artifacts/screenshots/53-sharp-menu-1920.png) | ![无尽模式](artifacts/screenshots/59-endless-wave13-preview.png) |
+| ![高分辨率游戏](artifacts/screenshots/53-sharp-menu-1920.png) | ![自动下一波](artifacts/screenshots/66-auto-next-countdown.png) |
 
 更多截图与验收数据见 `artifacts/`。
 
@@ -106,10 +107,10 @@ npm run preview
 - `npm test`：**33** 个单元测试通过（7 个测试文件）。
 - `npm run build` 通过。
 - 生产构建 `dist` 经 `vite preview` 在 Chrome 中冒烟通过：Canvas 1280×720、无黑屏、无错误、无失败请求（`artifacts/prod-smoke.json`）。
-- 真实浏览器验证：菜单/帮助、标准与无尽模式、建塔、4 种塔攻击路径、升级/卖出、下一波预览、暂停/恢复、音量控制、1x–5x 速度、Boss 血条、真实胜利、真实漏怪失败、分裂虫碎片、无尽第 13/14 波、重开、返回菜单、成绩持久化、移动横屏/竖屏自动暂停、844×390 与 2560×1080 背景满屏、2x 内部渲染下的 UI 命中与文字清晰度。
+- 真实浏览器验证：菜单/帮助、标准与无尽模式、建塔、4 种塔攻击路径、升级/卖出、下一波预览、暂停/恢复、音量控制、1x–5x 速度、自动下一波倒计时、Boss 血条、真实胜利、真实漏怪失败、分裂虫碎片、无尽第 13/14 波、重开、返回菜单、成绩持久化、移动横屏/竖屏自动暂停、844×390 与 2560×1080 背景满屏、2x 内部渲染下的 UI 命中与文字清晰度。
 - 浏览器控制台无错误、无第三方网络请求。
 - 硬件 WebGL（Intel Arc Pro 140T / ANGLE D3D11）压力探针：1x 渲染 30/60 个同屏敌人下帧率高于 60 fps；2x 内部渲染下 60 个敌人约 84 fps；详见 `artifacts/hidpi-perf.json`。
-- 验收记录与截图：`artifacts/final-verification.json`、`artifacts/p1-final-verification.json`、`artifacts/bgfill-verification.json`、`artifacts/sharpness-verification.json`、`artifacts/prod-sharpness.json`、`artifacts/speed-verification.json`、`artifacts/endless-verification.json`、`artifacts/screenshots/`。
+- 验收记录与截图：`artifacts/final-verification.json`、`artifacts/p1-final-verification.json`、`artifacts/bgfill-verification.json`、`artifacts/sharpness-verification.json`、`artifacts/prod-sharpness.json`、`artifacts/speed-verification.json`、`artifacts/endless-verification.json`、`artifacts/auto-next-verification.json`、`artifacts/screenshots/`。
 
 ## 已知限制 / 后续可做
 

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   BATTLE_BOTTOM,
   BATTLE_TOP,
+  AUTO_NEXT_DELAY,
   COLORS,
   DEPTH,
   GAME_HEIGHT,
@@ -85,6 +86,9 @@ export class GameScene extends Phaser.Scene {
   private currentWaveIndex = 0;
   private wavesCleared = 0;
   private endless = false;
+  private autoNextWave = false;
+  private autoNextRemaining = 0;
+  private lastAutoNextEmitAt = -1;
   private phase: 'prepare' | 'wave' | 'victory' | 'defeat' = 'prepare';
   private paused = false;
   private speed: Speed = 1;
@@ -138,6 +142,7 @@ export class GameScene extends Phaser.Scene {
     const settings = loadSettings();
     this.speed = settings.defaultSpeed;
     this.reducedMotion = settings.reducedMotion;
+    this.autoNextWave = settings.autoNextWave;
     this.cameras.main.setZoom(RENDER_SCALE);
     this.cameras.main.setScroll(
       -((RENDER_SCALE - 1) * GAME_WIDTH) / 2,
@@ -178,6 +183,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.tickAutoNext(delta);
     this.accumulator += (Math.min(delta, MAX_FRAME_DELTA * 1000) / 1000) * this.speed;
     let steps = 0;
     while (this.accumulator >= STEP_SEC && steps < MAX_STEPS_PER_FRAME) {
@@ -228,6 +234,8 @@ export class GameScene extends Phaser.Scene {
     this.accumulator = 0;
     this.hudDirty = true;
     this.restarting = false;
+    this.autoNextRemaining = 0;
+    this.lastAutoNextEmitAt = -1;
     this.lastSkillEmitAt = -1;
     this.lastSkillReady = true;
     this.lastSkillAiming = false;
@@ -329,6 +337,7 @@ export class GameScene extends Phaser.Scene {
     gameBus.on('ui:cancelSkillAim', this.handleCancelSkillAim, this);
     gameBus.on('ui:togglePause', this.handleTogglePause, this);
     gameBus.on('ui:setSpeed', this.handleSetSpeed, this);
+    gameBus.on('ui:setAutoNextWave', this.handleSetAutoNextWave, this);
     gameBus.on('ui:restart', this.handleRestart, this);
     gameBus.on('ui:quitMenu', this.handleQuitMenu, this);
   }
@@ -408,6 +417,19 @@ export class GameScene extends Phaser.Scene {
     audio.play('click');
     this.emitHud(true);
     this.emitMode();
+  };
+
+  private readonly handleSetAutoNextWave = (payload: { enabled: boolean }): void => {
+    this.autoNextWave = payload.enabled;
+    if (!payload.enabled) {
+      this.cancelAutoNext();
+      return;
+    }
+    if (this.phase === 'prepare' && this.wavesCleared > 0) {
+      this.scheduleAutoNext();
+    } else {
+      this.emitAutoNextStatus(true);
+    }
   };
 
   private readonly handleRestart = (): void => {
@@ -755,6 +777,7 @@ export class GameScene extends Phaser.Scene {
 
   private startWave(): void {
     if (this.paused || this.phase !== 'prepare') return;
+    this.cancelAutoNext();
     const wave = getWaveForIndex(this.wavesCleared + 1);
     if (!wave) return;
 
@@ -1261,10 +1284,44 @@ export class GameScene extends Phaser.Scene {
     this.emitSelection();
     this.emitBossStatus();
     this.effects.ringPulse(gridToPixel(LEVEL_ONE.core).x, gridToPixel(LEVEL_ONE.core).y, COLORS.cyan, 0.4, 2.2, 800);
+    this.scheduleAutoNext();
+  }
+
+  private tickAutoNext(delta: number): void {
+    if (this.phase !== 'prepare' || this.autoNextRemaining <= 0) return;
+    this.autoNextRemaining = Math.max(0, this.autoNextRemaining - Math.min(delta, 250) / 1000);
+    this.emitAutoNextStatus();
+    if (this.autoNextRemaining <= 0) {
+      this.startWave();
+    }
+  }
+
+  private scheduleAutoNext(): void {
+    if (!this.autoNextWave || this.phase !== 'prepare' || this.wavesCleared <= 0) return;
+    this.autoNextRemaining = AUTO_NEXT_DELAY;
+    this.lastAutoNextEmitAt = -1;
+    this.emitAutoNextStatus(true);
+  }
+
+  private cancelAutoNext(): void {
+    if (this.autoNextRemaining <= 0) return;
+    this.autoNextRemaining = 0;
+    this.emitAutoNextStatus(true);
+  }
+
+  private emitAutoNextStatus(force = false): void {
+    const now = performance.now();
+    if (!force && this.autoNextRemaining > 0 && now - this.lastAutoNextEmitAt < 100) return;
+    this.lastAutoNextEmitAt = now;
+    gameBus.emit('game:autoNext', {
+      active: this.autoNextRemaining > 0,
+      remaining: this.autoNextRemaining,
+    });
   }
 
   private endRun(victory: boolean): void {
     if (this.phase === 'victory' || this.phase === 'defeat') return;
+    this.cancelAutoNext();
     this.phase = victory ? 'victory' : 'defeat';
     this.waveActive = false;
     this.paused = false;
@@ -1478,6 +1535,7 @@ export class GameScene extends Phaser.Scene {
     this.emitMode();
     this.emitSelection();
     this.emitSkillStatus(true);
+    this.emitAutoNextStatus(true);
     this.emitBossStatus();
   }
 

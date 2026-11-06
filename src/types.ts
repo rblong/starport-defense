@@ -92,6 +92,7 @@ export interface SettingsData {
   reducedMotion: boolean;
   defaultSpeed: Speed;
   volume: number;
+  autoNextWave: boolean;
 }
 
 export interface ProgressData {

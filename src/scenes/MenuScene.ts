@@ -23,9 +23,11 @@ export class MenuScene extends Phaser.Scene {
   private soundButton!: Button;
   private motionButton!: Button;
   private volumeButton!: Button;
+  private autoNextButton!: Button;
   private soundLabel = '音效：开';
   private motionLabel = '动态效果：标准';
   private volumeLabel = '音量：50%';
+  private autoNextEnabled = false;
 
   constructor() {
     super('MenuScene');
@@ -41,6 +43,7 @@ export class MenuScene extends Phaser.Scene {
     );
     const settings = loadSettings();
     this.reducedMotion = settings.reducedMotion;
+    this.autoNextEnabled = settings.autoNextWave;
     this.backdrop = createMenuBackdrop(this);
 
     // Title composition ------------------------------------------------------
@@ -225,6 +228,23 @@ export class MenuScene extends Phaser.Scene {
     });
     this.volumeButton.container.setDepth(2);
 
+    this.autoNextButton = new Button(this, {
+      x: 490,
+      y: 596,
+      width: 300,
+      height: 36,
+      label: this.autoNextLabel(),
+      fontSize: 13,
+      accent: COLORS.magenta,
+      onClick: () => {
+        this.autoNextEnabled = !this.autoNextEnabled;
+        updateSettings({ autoNextWave: this.autoNextEnabled });
+        this.autoNextButton.setLabel(this.autoNextLabel());
+        audio.play('click');
+      },
+    });
+    this.autoNextButton.container.setDepth(2);
+
     this.add
       .text(GAME_WIDTH / 2, 658, '提示：标准模式 12 波，或进入无尽模式冲击最高波次。准备阶段不限时。', {
         fontFamily: FONT_FAMILY,
@@ -261,6 +281,10 @@ export class MenuScene extends Phaser.Scene {
     audio.unlock();
     audio.play('click');
     this.scene.start('GameScene', { endless });
+  }
+
+  private autoNextLabel(): string {
+    return this.autoNextEnabled ? '自动下一波：开' : '自动下一波：关';
   }
 
   update(_time: number, delta: number): void {
