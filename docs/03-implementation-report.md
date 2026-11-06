@@ -13,7 +13,7 @@
 
 《星港防线》已按需求文档的 P0 范围完成实现，并在真实浏览器中验证了完整游戏循环：
 
-- 1 张地图、12 波、4 座防御塔、5 类敌人 + 精英 + Boss；
+- 1 张地图、12 波标准战役 + 无尽模式、4 座防御塔、5 类敌人 + 精英 + Boss；
 - 建塔、3 级升级、卖出、目标优先级切换；
 - 轨道轰炸主动技能；
 - 暂停/继续、1x–5x 速度、音效、音量、减少动态效果；
@@ -51,7 +51,7 @@ npm run preview   # 预览 dist
 | 检查 | 结果 |
 | --- | --- |
 | `npm run typecheck` | 通过（0 错误） |
-| `npm test` | 6 个测试文件、**30** 个测试全部通过 |
+| `npm test` | 7 个测试文件、**33** 个测试全部通过 |
 | `npm run build` | 通过，输出 `dist/assets/index-*.js`（约 1.46 MB / gzip 383 KB） |
 | 浏览器控制台 | 无未处理错误 |
 | 运行期网络 | 无第三方请求、无 4xx/5xx（`final-verification.json` 中 `networkIssues: []`） |
@@ -82,6 +82,8 @@ npm run preview   # 预览 dist
 | 塔升级到 Lv.2、卖出 70% 返还 | 通过 |
 | `Space` 暂停 / 继续 | 通过（暂停标志与 Scene 状态同步） |
 | `F` / 速度按钮循环 1x→5x | 通过（1→2→3→4→5→1，HUD 显示 5x，`speed-verification.json`） |
+| 无尽模式进入与第 13 波 | 通过（HUD 13/∞，生成 33 个敌人，hpScale 1.62，`endless-verification.json`） |
+| 清空第 13 波后继续第 14 波 | 通过（未触发胜利，回到准备阶段） |
 | 第 12 波 Boss 出现、顶部血条可见 | 通过（`虚空母舰`） |
 | 清空第 12 波全部敌人 | 通过真实波次完成路径触发胜利 |
 | 胜利结算 / 最佳成绩写入 | 通过（评分 6714，写入 localStorage） |
@@ -127,13 +129,15 @@ Headless 环境未限制渲染帧率，数值高于 60 fps 属正常；结果说
 - `artifacts/hidpi-perf.json`：2x 渲染下的性能探针；
 - `artifacts/prod-sharpness.json`：生产构建 2x 渲染冒烟；
 - `artifacts/speed-verification.json`：1x–5x 速度循环与 5x 战斗检查；
+- `artifacts/endless-verification.json`：无尽模式进入、第 13 波生成/清空与第 14 波检查；
 - `artifacts/screenshots/`：菜单、帮助、战斗、暂停、Boss、胜利、失败、移动端等截图。
 
 主要截图：
 
 | 场景 | 文件 |
 | --- | --- |
-| 主菜单（2x 内部渲染） | `artifacts/screenshots/54-prod-sharp-menu.png` |
+| 主菜单（标准 / 无尽） | `artifacts/screenshots/57-menu-endless.png` |
+| 无尽模式下一波预览 | `artifacts/screenshots/59-endless-wave13-preview.png` |
 | 1920×1080 高分辨率界面 | `artifacts/screenshots/53-sharp-menu-1920.png` |
 | 帮助面板 | `artifacts/screenshots/41-final-help-v11.png` |
 | 下一波预览 | `artifacts/screenshots/42-final-wave-preview.png` |
@@ -163,18 +167,19 @@ Headless 环境未限制渲染帧率，数值高于 60 fps 属正常；结果说
 | 背景铺满 | 新增独立 HTML Canvas 星空/星云环境层；仅填充 letterbox 区域，不影响 Phaser 画面比例与 UI 命中区域。 |
 | 高分辨率渲染 | 游戏相机设置为 2x zoom 并保持在 1280×720 逻辑坐标系；画布内部 2560×1440，文本纹理 resolution=2。鼠标坐标经 `camera.getWorldPoint` 转回逻辑坐标，避免 UI 热区偏移。 |
 | 速度档位 | 由 1x/2x 扩展为 1x–5x；F 键或 HUD 速度按钮循环切换，固定步长最多补 12 步/帧。 |
+| 无尽模式 | 标准 12 波之外新增主菜单入口；第 13 波起由 `getWaveForIndex()` 生成 4 套轮换编队，血量随波次增长，清波后继续而非结算胜利；最高波次/最佳成绩沿用本地存档。 |
 | 中局存档 | 未实现，符合原方案非目标。 |
 
 ---
 
 ## 5. 已知限制与建议
 
-1. **平衡性**：当前数值为初版基线，已能稳定通过第 1 波并在真实流程中完成第 12 波，但尚未经过大量真人试玩；可继续调整波次数量与塔价。
+1. **平衡性**：标准模式已能稳定通过第 1 波并在真实流程中完成第 12 波；无尽模式生成规则已完成，但高波次数值曲线建议继续真人试玩调参。
 2. **移动端**：游戏主体保持 16:9，超宽屏/手机横屏两侧由动态星空背景填充；触控目标已按 ≥56 逻辑像素设计，但尚未做真实设备手测。
 3. **音效主观质量**：Headless 验证环境静音，未评价合成音色的听感；需在有声设备上试听。
 4. **无障碍**：已提供键盘操作、音效/音量控制、减少动态效果与颜色冗余；Canvas 游戏未提供完整屏幕阅读器支持。
 
-后续优先级建议：先做真实设备/低端机性能与触控验收，再考虑 BGM、第二张地图/无尽模式或更多关卡机制。
+后续优先级建议：先做真实设备/低端机性能与触控验收，再考虑 BGM、第二张地图、成就或更多关卡机制。
 
 ---
 

@@ -108,6 +108,7 @@ export interface HudSnapshot {
   credits: number;
   wave: number;
   totalWaves: number;
+  endless: boolean;
   kills: number;
   enemiesRemaining: number;
   speed: Speed;
@@ -144,6 +145,7 @@ export interface ToastPayload {
 
 export interface ResultPayload {
   victory: boolean;
+  endless: boolean;
   waveReached: number;
   wavesCleared: number;
   kills: number;

@@ -28,7 +28,7 @@ import type {
   WaveBannerPayload,
 } from '../types';
 import { TOWER_MAP, getTowerStats } from '../data/towers';
-import { WAVES } from '../data/waves';
+import { getWaveForIndex } from '../data/waves';
 import { Button } from '../ui/Button';
 import { TowerCard } from '../ui/TowerCard';
 import { sharpenSceneText } from '../ui/sharpenText';
@@ -47,6 +47,7 @@ export class UIScene extends Phaser.Scene {
     credits: START_CREDITS,
     wave: 1,
     totalWaves: TOTAL_WAVES,
+    endless: false,
     kills: 0,
     enemiesRemaining: 0,
     speed: 1,
@@ -201,6 +202,7 @@ export class UIScene extends Phaser.Scene {
       credits: START_CREDITS,
       wave: 1,
       totalWaves: TOTAL_WAVES,
+      endless: false,
       kills: 0,
       enemiesRemaining: 0,
       speed: 1,
@@ -575,15 +577,14 @@ export class UIScene extends Phaser.Scene {
       this.mode.phase === 'prepare' &&
       !this.resultVisible &&
       !this.pauseVisible &&
-      this.hud.wave >= 1 &&
-      this.hud.wave <= TOTAL_WAVES;
+      this.hud.wave >= 1;
     if (!shouldShow) {
       this.wavePreview.setVisible(false);
       return;
     }
 
     if (this.previewWave !== this.hud.wave) {
-      const wave = WAVES[this.hud.wave - 1];
+      const wave = getWaveForIndex(this.hud.wave);
       if (!wave) {
         this.wavePreview.setVisible(false);
         return;
@@ -972,7 +973,9 @@ export class UIScene extends Phaser.Scene {
     this.integrityText.setText(`${this.hud.integrity}`);
     this.integrityText.setColor(this.hud.integrity <= 6 ? CSS_COLORS.red : CSS_COLORS.text);
     this.creditsText.setText(`${this.hud.credits}`);
-    this.waveText.setText(`${this.hud.wave} / ${this.hud.totalWaves}`);
+    this.waveText.setText(
+      this.hud.endless ? `${this.hud.wave} / ∞` : `${this.hud.wave} / ${this.hud.totalWaves}`,
+    );
     this.killsText.setText(`${this.hud.kills}`);
     this.enemiesText.setText(`${this.hud.enemiesRemaining}`);
     this.speedButton.setLabel(`${this.hud.speed}x`);
@@ -980,14 +983,15 @@ export class UIScene extends Phaser.Scene {
       card.setAffordable(this.hud.credits >= card.tower.cost);
     });
 
+    const modePrefix = this.hud.endless ? '无尽 · ' : '';
     if (this.mode.phase === 'prepare') {
       this.startWaveButton.setEnabled(!this.pauseVisible && !this.resultVisible);
       this.startWaveButton.setLabel(`开始第 ${this.hud.wave} 波`, 'ENTER');
-      this.waveStatusText.setText('准备阶段').setColor(CSS_COLORS.cyan);
+      this.waveStatusText.setText(`${modePrefix}准备阶段`).setColor(CSS_COLORS.cyan);
     } else if (this.mode.phase === 'wave') {
       this.startWaveButton.setEnabled(false);
       this.startWaveButton.setLabel(`第 ${this.hud.wave} 波`, `剩余 ${this.hud.enemiesRemaining}`);
-      this.waveStatusText.setText('交战中').setColor(CSS_COLORS.magenta);
+      this.waveStatusText.setText(`${modePrefix}交战中`).setColor(CSS_COLORS.magenta);
     } else {
       this.startWaveButton.setEnabled(false);
       this.startWaveButton.setLabel(this.hud.phase === 'victory' ? '防线稳定' : '防线失守', '');
@@ -1212,14 +1216,18 @@ export class UIScene extends Phaser.Scene {
     this.bannerContainer.setAlpha(0);
     this.wavePreview.setVisible(false);
     this.resultModal.setVisible(true);
-    this.resultTitle.setText(result.victory ? '防线稳定' : '核心失守');
+    this.resultTitle.setText(result.victory ? '防线稳定' : result.endless ? '无尽终结' : '核心失守');
     this.resultTitle.setColor(result.victory ? CSS_COLORS.cyan : CSS_COLORS.red);
     this.resultSubtitle.setText(
-      result.victory ? 'NEXUS-7 跃迁核心保持完整，虫群已被击退。' : '星港防线被突破。调整构筑，再来一次。',
+      result.victory
+        ? 'NEXUS-7 跃迁核心保持完整，虫群已被击退。'
+        : result.endless
+          ? `你守到了第 ${result.waveReached} 波。无尽虫潮仍在继续。`
+          : '星港防线被突破。调整构筑，再来一次。',
     );
     this.resultScore.setText(`评分  ${result.score.toLocaleString('zh-CN')}`);
     this.resultStats.setText(
-      `到达波次   ${result.waveReached} / ${TOTAL_WAVES}\n击杀数量   ${result.kills}\n剩余完整度 ${result.integrity}\n剩余信用点 ${result.credits}`,
+      `到达波次   ${result.waveReached} / ${result.endless ? '∞' : TOTAL_WAVES}\n击杀数量   ${result.kills}\n剩余完整度 ${result.integrity}\n剩余信用点 ${result.credits}`,
     );
     this.resultBest.setText(
       result.isNewBest

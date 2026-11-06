@@ -1,0 +1,46 @@
+{
+  "steps": [
+    {
+      "name": "enter",
+      "endless": true,
+      "phase": "prepare",
+      "hudEndless": true,
+      "waveText": "1 / ∞",
+      "status": "无尽 · 准备阶段"
+    },
+    {
+      "name": "preview-13",
+      "previewVisible": true,
+      "wave": 13,
+      "waveText": "13 / ∞",
+      "bonus": "清波 +85",
+      "pending": 0
+    },
+    {
+      "name": "wave13",
+      "index": 13,
+      "phase": "wave",
+      "endless": true,
+      "pending": 33,
+      "hpScale": 1.62,
+      "hudWave": 13,
+      "waveText": "13 / ∞"
+    },
+    {
+      "name": "after-wave13",
+      "phase": "prepare",
+      "wavesCleared": 13,
+      "endless": true,
+      "waveText": "14 / ∞",
+      "status": "无尽 · 准备阶段"
+    },
+    {
+      "name": "wave14",
+      "index": 14,
+      "phase": "wave",
+      "endless": true,
+      "pending": 22
+    }
+  ],
+  "errors": []
+}

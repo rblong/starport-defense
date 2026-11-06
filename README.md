@@ -4,7 +4,7 @@
 
 > 在 12 波异星虫群的进攻中，用 4 类炮塔、升级与轨道轰炸，守住 NEXUS-7 星港的跃迁核心。
 
-![主菜单](artifacts/screenshots/54-prod-sharp-menu.png)
+![主菜单](artifacts/screenshots/57-menu-endless.png)
 
 ## 快速开始
 
@@ -32,6 +32,7 @@ npm run preview
 - **4 座防御塔**：脉冲炮塔（单体追踪）、榴弹迫击炮（范围）、霜冻发生器（减速）、电弧线圈（连锁），各 3 级升级与卖出返还。
 - **5 类敌人 + 精英 + Boss**：侦察虫、疾行虫、装甲虫、分裂虫、碎片；护甲、减速抗性、分裂、Boss 半血狂暴。
 - **主动技能**：轨道轰炸，0.4 秒预警、200 点无视护甲范围伤害、30 秒冷却。
+- **无尽模式**：标准 12 波战役之外，可从主菜单进入无限波；敌人数量与血量持续提高，冲击最高波次。
 - **操作与节奏**：鼠标/键盘建造；1x–5x 速度；暂停；波间准备不限时；波次中也可建造/升级/卖出。
 - **下一波预览**：准备阶段显示下一波敌人构成与清波奖励，开波后自动隐藏。
 - **设置**：音效开关、音量（100% / 75% / 50% / 25% / 0%）、减少动态效果；菜单与暂停面板均可调整，状态持久化。
@@ -49,6 +50,7 @@ npm run preview
 
 | 操作 | 键鼠 |
 | --- | --- |
+| 开始标准模式 / 无尽模式 | 点击“标准模式 / 无尽模式” / `Enter` / `E` |
 | 选择防御塔 | 点击底部塔卡 / `1`–`4` |
 | 放置防御塔 | 点击战场六边形建造位 |
 | 取消放置 / 关闭面板 | 右键 / `Esc` |
@@ -73,9 +75,9 @@ npm run preview
 | --- | --- |
 | ![手机横屏](artifacts/screenshots/46-bgfill-mobile-landscape.png) | ![超宽屏](artifacts/screenshots/47-bgfill-ultrawide.png) |
 
-| 1920×1080：2x 内部渲染 | 高分辨率菜单 |
+| 1920×1080：2x 内部渲染 | 无尽模式：下一波预览 |
 | --- | --- |
-| ![高分辨率游戏](artifacts/screenshots/53-sharp-menu-1920.png) | ![高分辨率菜单](artifacts/screenshots/54-prod-sharp-menu.png) |
+| ![高分辨率游戏](artifacts/screenshots/53-sharp-menu-1920.png) | ![无尽模式](artifacts/screenshots/59-endless-wave13-preview.png) |
 
 更多截图与验收数据见 `artifacts/`。
 
@@ -101,18 +103,18 @@ npm run preview
 ## 验证状态
 
 - `npm run typecheck` 通过。
-- `npm test`：**30** 个单元测试通过（6 个测试文件）。
+- `npm test`：**33** 个单元测试通过（7 个测试文件）。
 - `npm run build` 通过。
 - 生产构建 `dist` 经 `vite preview` 在 Chrome 中冒烟通过：Canvas 1280×720、无黑屏、无错误、无失败请求（`artifacts/prod-smoke.json`）。
-- 真实浏览器验证：菜单/帮助、建塔、4 种塔攻击路径、升级/卖出、下一波预览、暂停/恢复、音量控制、1x–5x 速度、Boss 血条、真实胜利、真实漏怪失败、分裂虫碎片、重开、返回菜单、成绩持久化、移动横屏/竖屏自动暂停、844×390 与 2560×1080 背景满屏、2x 内部渲染下的 UI 命中与文字清晰度。
+- 真实浏览器验证：菜单/帮助、标准与无尽模式、建塔、4 种塔攻击路径、升级/卖出、下一波预览、暂停/恢复、音量控制、1x–5x 速度、Boss 血条、真实胜利、真实漏怪失败、分裂虫碎片、无尽第 13/14 波、重开、返回菜单、成绩持久化、移动横屏/竖屏自动暂停、844×390 与 2560×1080 背景满屏、2x 内部渲染下的 UI 命中与文字清晰度。
 - 浏览器控制台无错误、无第三方网络请求。
 - 硬件 WebGL（Intel Arc Pro 140T / ANGLE D3D11）压力探针：1x 渲染 30/60 个同屏敌人下帧率高于 60 fps；2x 内部渲染下 60 个敌人约 84 fps；详见 `artifacts/hidpi-perf.json`。
-- 验收记录与截图：`artifacts/final-verification.json`、`artifacts/p1-final-verification.json`、`artifacts/bgfill-verification.json`、`artifacts/sharpness-verification.json`、`artifacts/prod-sharpness.json`、`artifacts/speed-verification.json`、`artifacts/screenshots/`。
+- 验收记录与截图：`artifacts/final-verification.json`、`artifacts/p1-final-verification.json`、`artifacts/bgfill-verification.json`、`artifacts/sharpness-verification.json`、`artifacts/prod-sharpness.json`、`artifacts/speed-verification.json`、`artifacts/endless-verification.json`、`artifacts/screenshots/`。
 
 ## 已知限制 / 后续可做
 
 - 移动端为 P1：游戏本体保持 16:9，超宽屏两侧由动态背景填充；触控手感尚未做深度打磨。
-- 只有一个关卡与 12 波内容；无尽模式、第二张地图、成就等属于 P2。
+- 标准模式 12 波 + 无尽模式；无尽难度曲线仍建议通过真人试玩继续调参。
 - 无背景音乐；音效为合成音色。
 - 无中局存档；刷新页面会结束当前对局。
 - 数值为初版基线，建议在更多实机试玩后继续微调难度曲线。

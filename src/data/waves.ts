@@ -82,3 +82,58 @@ export const WAVES: WaveConfig[] = [
 ];
 
 export const WAVE_MAP = new Map(WAVES.map((wave) => [wave.index, wave]));
+
+/**
+ * Returns a configured campaign wave, or a procedurally scaled endless wave
+ * after wave 12. The generated waves stay data-shaped so GameScene's spawn
+ * pipeline is unchanged.
+ */
+export function getWaveForIndex(index: number): WaveConfig | undefined {
+  if (!Number.isInteger(index) || index < 1) return undefined;
+  if (index <= WAVES.length) return WAVES[index - 1];
+  return generateEndlessWave(index);
+}
+
+function generateEndlessWave(index: number): WaveConfig {
+  const cycle = (index - WAVES.length - 1) % 4;
+  const tier = Math.floor((index - WAVES.length - 1) / 4);
+  const hpScale = Math.min(12, 1.55 + (index - WAVES.length) * 0.07);
+  const groups: WaveConfig['groups'] = [];
+  const add = (enemyId: EnemyId, count: number, interval: number, delay = 0): void => {
+    groups.push({
+      enemyId,
+      count: Math.max(1, Math.min(40, count)),
+      interval,
+      delay,
+    });
+  };
+
+  // Four rotating compositions keep endless runs varied without introducing
+  // new unit types or assets.
+  switch (cycle) {
+    case 0:
+      add('scout', 18 + tier * 2, 0.45);
+      add('runner', 10 + tier * 2, 0.3, 0.8);
+      add('brute', 5 + tier, 1.8, 1.2);
+      break;
+    case 1:
+      add('brute', 8 + tier, 1.8);
+      add('elite', 2 + Math.floor(tier / 2), 2.4, 1.5);
+      add('scout', 12 + tier, 0.5);
+      break;
+    case 2:
+      add('splitter', 10 + tier, 1.0);
+      add('runner', 20 + tier * 2, 0.28, 1.4);
+      add('scout', 10 + tier, 0.45);
+      break;
+    default:
+      add('elite', 3 + tier, 2.0);
+      add('brute', 10 + tier, 1.6, 1.0);
+      add('runner', 14 + tier * 2, 0.3, 2.0);
+      add('scout', 16 + tier, 0.4);
+      break;
+  }
+
+  return { index, hpScale, groups };
+}
+

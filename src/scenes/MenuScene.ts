@@ -7,6 +7,7 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
   RENDER_SCALE,
+  TOTAL_WAVES,
 } from '../game/constants';
 import { createMenuBackdrop, type BackgroundLayers } from '../render/background';
 import { Button } from '../ui/Button';
@@ -116,30 +117,44 @@ export class MenuScene extends Phaser.Scene {
       color: CSS_COLORS.text,
       fontStyle: 'bold',
     });
-    this.add.text(950, 150, `最高波次  ${progress.bestWave} / 12      ${progress.cleared ? '已通关' : '未通关'}`, {
+    const bestWaveLabel =
+      progress.bestWave > TOTAL_WAVES
+        ? `最高波次  无尽 ${progress.bestWave} 波`
+        : `最高波次  ${progress.bestWave} / ${TOTAL_WAVES}`;
+    this.add.text(950, 150, `${bestWaveLabel}      ${progress.cleared ? '已通关' : '未通关'}`, {
       fontFamily: FONT_FAMILY,
       fontSize: '12px',
       color: CSS_COLORS.muted,
     });
 
     // Actions ----------------------------------------------------------------
-    const startButton = new Button(this, {
+    const standardButton = new Button(this, {
       x: 490,
-      y: 394,
-      width: 300,
+      y: 386,
+      width: 146,
       height: 66,
-      label: '开始行动',
-      subLabel: 'ENTER THE STARPORT',
-      fontSize: 21,
-      subFontSize: 10,
+      label: '标准模式',
+      subLabel: '12 波战役',
+      fontSize: 18,
+      subFontSize: 9,
       accent: COLORS.cyan,
-      onClick: () => {
-        audio.unlock();
-        audio.play('click');
-        this.scene.start('GameScene');
-      },
+      onClick: () => this.startGame(false),
     });
-    startButton.container.setDepth(2);
+    standardButton.container.setDepth(2);
+
+    const endlessButton = new Button(this, {
+      x: 644,
+      y: 386,
+      width: 146,
+      height: 66,
+      label: '无尽模式',
+      subLabel: '∞ 波挑战',
+      fontSize: 18,
+      subFontSize: 9,
+      accent: COLORS.magenta,
+      onClick: () => this.startGame(true),
+    });
+    endlessButton.container.setDepth(2);
 
     const helpButton = new Button(this, {
       x: 490,
@@ -211,7 +226,7 @@ export class MenuScene extends Phaser.Scene {
     this.volumeButton.container.setDepth(2);
 
     this.add
-      .text(GAME_WIDTH / 2, 658, '提示：先建塔，再点击「开始第 1 波」。准备阶段不限时。', {
+      .text(GAME_WIDTH / 2, 658, '提示：标准模式 12 波，或进入无尽模式冲击最高波次。准备阶段不限时。', {
         fontFamily: FONT_FAMILY,
         fontSize: '14px',
         color: CSS_COLORS.muted,
@@ -232,11 +247,20 @@ export class MenuScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-ENTER', () => {
       if (!this.helpOpen) {
-        audio.unlock();
-        audio.play('click');
-        this.scene.start('GameScene');
+        this.startGame(false);
       }
     });
+    this.input.keyboard?.on('keydown-E', () => {
+      if (!this.helpOpen) {
+        this.startGame(true);
+      }
+    });
+  }
+
+  private startGame(endless: boolean): void {
+    audio.unlock();
+    audio.play('click');
+    this.scene.start('GameScene', { endless });
   }
 
   update(_time: number, delta: number): void {
@@ -270,6 +294,7 @@ export class MenuScene extends Phaser.Scene {
     const body = [
       '【目标】守住地图右侧的跃迁核心，抵挡 12 波异星虫群，最终击毁虚空母舰。',
       '',
+      '【模式】主菜单可选择标准 12 波战役，或进入无尽模式持续冲击更高波次。',
       '【建造】点击底部塔卡或按 1–4 选塔，再点击战场上的六边形建造位。',
       '　　　　波次进行中也可以建造、升级和卖出。',
       '【升级】点击已建塔，在底部面板升级到 3 级，或按 70% 返还卖出；可切换索敌优先级。',

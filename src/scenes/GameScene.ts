@@ -40,7 +40,7 @@ import { expandWave, type SpawnEvent } from '../domain/waves';
 import { computeScore } from '../domain/score';
 import { calculateSellValue } from '../domain/economy';
 import { ENEMY_MAP } from '../data/enemies';
-import { WAVES } from '../data/waves';
+import { getWaveForIndex } from '../data/waves';
 import { TOWER_MAP, getTowerStats } from '../data/towers';
 import { LEVEL_ONE, gridToPixel, pathToPixels } from '../data/level01';
 import { createBackground, type BackgroundLayers } from '../render/background';
@@ -84,6 +84,7 @@ export class GameScene extends Phaser.Scene {
   private waveActive = false;
   private currentWaveIndex = 0;
   private wavesCleared = 0;
+  private endless = false;
   private phase: 'prepare' | 'wave' | 'victory' | 'defeat' = 'prepare';
   private paused = false;
   private speed: Speed = 1;
@@ -122,6 +123,10 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('GameScene');
+  }
+
+  init(data?: { endless?: boolean }): void {
+    this.endless = data?.endless === true;
   }
 
   create(): void {
@@ -411,7 +416,7 @@ export class GameScene extends Phaser.Scene {
     this.paused = false;
     if (this.scene.isPaused()) this.scene.resume();
     this.scene.stop('UIScene');
-    this.scene.restart();
+    this.scene.restart({ endless: this.endless });
   };
 
   private readonly handleQuitMenu = (): void => {
@@ -750,7 +755,7 @@ export class GameScene extends Phaser.Scene {
 
   private startWave(): void {
     if (this.paused || this.phase !== 'prepare') return;
-    const wave = WAVES[this.wavesCleared];
+    const wave = getWaveForIndex(this.wavesCleared + 1);
     if (!wave) return;
 
     this.currentWaveIndex = wave.index;
@@ -768,7 +773,7 @@ export class GameScene extends Phaser.Scene {
     const isBoss = wave.groups.some((group) => group.enemyId === 'boss');
     const banner: WaveBannerPayload = {
       title: isBoss ? '最终波 · 虚空母舰' : `第 ${wave.index} 波`,
-      subtitle: isBoss ? '击毁母舰，守住星港' : '虫群信号接近中',
+      subtitle: isBoss ? '击毁母舰，守住星港' : this.endless ? '无尽虫潮，持续增援' : '虫群信号接近中',
       tone: isBoss ? 'boss' : 'wave',
     };
     gameBus.emit('game:waveBanner', banner);
@@ -1243,7 +1248,7 @@ export class GameScene extends Phaser.Scene {
     gameBus.emit('game:toast', { message: `第 ${this.currentWaveIndex} 波已清除  +${bonus} 信用点`, tone: 'success' });
     audio.play('wave');
 
-    if (this.currentWaveIndex >= TOTAL_WAVES) {
+    if (!this.endless && this.currentWaveIndex >= TOTAL_WAVES) {
       this.endRun(true);
       return;
     }
@@ -1310,6 +1315,7 @@ export class GameScene extends Phaser.Scene {
 
     const result: ResultPayload = {
       victory,
+      endless: this.endless,
       waveReached,
       wavesCleared: victory ? TOTAL_WAVES : this.wavesCleared,
       kills: this.kills,
@@ -1369,9 +1375,9 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   private getDisplayWave(): number {
-    if (this.phase === 'prepare') return Math.min(this.wavesCleared + 1, TOTAL_WAVES);
+    if (this.phase === 'prepare') return this.wavesCleared + 1;
     if (this.currentWaveIndex > 0) return this.currentWaveIndex;
-    return Math.min(this.wavesCleared + 1, TOTAL_WAVES);
+    return this.wavesCleared + 1;
   }
 
   private getEnemiesRemaining(): number {
@@ -1386,6 +1392,7 @@ export class GameScene extends Phaser.Scene {
       credits: this.credits,
       wave: this.getDisplayWave(),
       totalWaves: TOTAL_WAVES,
+      endless: this.endless,
       kills: this.kills,
       enemiesRemaining: this.getEnemiesRemaining(),
       speed: this.speed,
