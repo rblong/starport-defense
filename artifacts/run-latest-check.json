@@ -1,0 +1,18 @@
+{
+  "canvas": {
+    "l": 0,
+    "t": 0,
+    "w": 1280,
+    "h": 720,
+    "bw": 1280,
+    "bh": 720
+  },
+  "gameReady": true,
+  "pad0": {
+    "x": 160,
+    "y": 248
+  },
+  "towers": 1,
+  "phase": "wave",
+  "errors": []
+}

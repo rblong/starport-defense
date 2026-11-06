@@ -1,0 +1,15 @@
+{
+  "ambient": {
+    "width": 1280,
+    "height": 720,
+    "centerAlpha": 0,
+    "cssWidth": "1280px",
+    "cssHeight": "720px"
+  },
+  "menuActive": true,
+  "gameCanvas": {
+    "w": 1280,
+    "h": 720
+  },
+  "errors": []
+}

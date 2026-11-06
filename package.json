@@ -1,0 +1,23 @@
+{
+  "name": "starport-defense",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Starport Defense - a Phaser 4 tower defense mini-game",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  }
+}

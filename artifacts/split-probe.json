@@ -1,0 +1,17 @@
+{
+  "before": {
+    "spawned": 1,
+    "hp": -99859
+  },
+  "after": {
+    "shards": 2,
+    "shardIds": [
+      2,
+      3
+    ],
+    "kills": 1,
+    "credits": 234,
+    "errors": 0
+  },
+  "errors": []
+}

@@ -1,0 +1,20 @@
+{
+  "speeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    1
+  ],
+  "afterKeyF": 2,
+  "atFive": 5,
+  "hudLabel": "5x",
+  "state": {
+    "speed": 5,
+    "phase": "wave",
+    "enemies": 8,
+    "runTime": 17.583333333333616
+  },
+  "errors": []
+}

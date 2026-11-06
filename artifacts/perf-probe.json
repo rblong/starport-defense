@@ -1,0 +1,24 @@
+{
+  "gl": {
+    "renderer": "ANGLE (Intel, Intel(R) Arc(TM) Pro 140T GPU (16GB) (0x00007D51) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (Intel)",
+    "version": "WebGL 1.0 (OpenGL ES 2.0 Chromium)"
+  },
+  "baseline": {
+    "fps": 63,
+    "enemies": 0
+  },
+  "thirty": {
+    "fps": 95.671875,
+    "enemies": 30,
+    "delta": 8.329999999999927
+  },
+  "sixty": {
+    "fps": 109.924072265625,
+    "enemies": 60,
+    "delta": 8.31999999999989
+  },
+  "idle": {
+    "fps": 116.07734298706055
+  }
+}

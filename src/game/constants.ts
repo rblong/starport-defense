@@ -1,0 +1,104 @@
+import type { Speed } from '../types';
+
+export const GAME_WIDTH = 1280;
+export const GAME_HEIGHT = 720;
+
+/**
+ * Logical-to-render pixel factor. The scenes keep designing in 1280x720, but
+ * the WebGL canvas is rendered at 2x and downscaled by the browser. This keeps
+ * text and vector lines crisp on 1080p/1440p/high-DPI displays.
+ */
+export const RENDER_SCALE = 2;
+
+export const HUD_HEIGHT = 64;
+export const BUILD_BAR_HEIGHT = 96;
+export const BUILD_BAR_Y = GAME_HEIGHT - BUILD_BAR_HEIGHT;
+export const BATTLE_TOP = HUD_HEIGHT;
+export const BATTLE_BOTTOM = BUILD_BAR_Y;
+
+export const GRID_COLS = 18;
+export const GRID_ROWS = 8;
+export const TILE_SIZE = 64;
+export const GRID_ORIGIN_X = (GAME_WIDTH - GRID_COLS * TILE_SIZE) / 2;
+export const GRID_ORIGIN_Y = BATTLE_TOP + (BATTLE_BOTTOM - BATTLE_TOP - GRID_ROWS * TILE_SIZE) / 2;
+
+export const TOTAL_WAVES = 12;
+export const START_CREDITS = 220;
+export const START_INTEGRITY = 20;
+export const SELL_REFUND_RATE = 0.7;
+export const SKILL_DAMAGE = 200;
+export const SKILL_RADIUS = 90;
+export const SKILL_COOLDOWN = 30;
+export const SKILL_TELEGRAPH = 0.4;
+export const STEP_SEC = 1 / 60;
+export const MAX_STEPS_PER_FRAME = 12;
+export const MAX_FRAME_DELTA = 0.1;
+export const SPEED_LEVELS: readonly Speed[] = [1, 2, 3, 4, 5];
+export const ONE_SHOT_CHAIN_FALLOFF = 0.65;
+export const CHAIN_RADIUS = 110;
+
+export function waveClearBonus(wave: number): number {
+  return 20 + 5 * wave;
+}
+
+export const COLORS = {
+  void: 0x050814,
+  void2: 0x080d1d,
+  panel: 0x0b1224,
+  panelLight: 0x121c33,
+  panelHover: 0x172743,
+  line: 0x1b3558,
+  lineBright: 0x2c5a86,
+  cyan: 0x39e7ff,
+  cyanDim: 0x1a8ea8,
+  cyanDark: 0x0e3f52,
+  magenta: 0xff4fd8,
+  magentaDim: 0x9e2a86,
+  amber: 0xffc857,
+  amberDim: 0x9c7420,
+  red: 0xff5a6a,
+  redDark: 0x5c1d2a,
+  green: 0x66ffb2,
+  text: 0xeaf6ff,
+  muted: 0x8fa6c4,
+  dim: 0x51647e,
+  white: 0xffffff,
+  black: 0x000000,
+} as const;
+
+export const CSS_COLORS = {
+  void: '#050814',
+  panel: '#0b1224',
+  panelLight: '#121c33',
+  cyan: '#39e7ff',
+  cyanDim: '#1a8ea8',
+  magenta: '#ff4fd8',
+  amber: '#ffc857',
+  red: '#ff5a6a',
+  green: '#66ffb2',
+  text: '#eaf6ff',
+  muted: '#8fa6c4',
+  dim: '#51647e',
+  white: '#ffffff',
+} as const;
+
+export const FONT_FAMILY =
+  '"Inter", "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif';
+export const FONT_MONO = '"Cascadia Mono", "Consolas", "Courier New", monospace';
+
+export const DEPTH = {
+  background: 0,
+  backgroundFx: 2,
+  path: 10,
+  pads: 14,
+  core: 18,
+  towers: 24,
+  enemies: 30,
+  projectiles: 40,
+  effects: 50,
+  ghost: 55,
+  hud: 100,
+  ui: 120,
+  modal: 200,
+  toast: 220,
+} as const;

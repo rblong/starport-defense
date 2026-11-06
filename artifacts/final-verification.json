@@ -1,0 +1,111 @@
+{
+  "screenshots": [
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\20-final-menu.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\21-help-modal.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\22-final-pause.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\23-final-boss.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\24-final-victory.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\25-final-menu-best.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\26-final-defeat.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\27-mobile-landscape.png",
+    "C:\\Users\\LU\\Desktop\\AICode\\DotNetAI\\starport-defense\\artifacts\\screenshots\\28-mobile-portrait.png"
+  ],
+  "steps": [
+    {
+      "name": "help",
+      "helpOpen": true,
+      "helpClosed": true
+    },
+    {
+      "name": "wave1-real",
+      "phase": "prepare",
+      "cleared": 1,
+      "kills": 8,
+      "integrity": 20
+    },
+    {
+      "name": "space",
+      "paused": {
+        "paused": true,
+        "scenePaused": true
+      },
+      "resumed": {
+        "paused": false,
+        "scenePaused": false
+      }
+    },
+    {
+      "name": "boss",
+      "boss": true,
+      "bossHp": 3490,
+      "bar": true,
+      "bossName": "虚空母舰",
+      "pending": 18
+    },
+    {
+      "name": "victory",
+      "phase": "victory",
+      "cleared": 12,
+      "result": true,
+      "title": "防线稳定",
+      "modal": true
+    },
+    {
+      "name": "menu-return",
+      "menu": true,
+      "game": false,
+      "best": 6714
+    },
+    {
+      "name": "defeat",
+      "leakSetup": {
+        "ok": true,
+        "integrity": 1,
+        "distance": 1919,
+        "total": 1920
+      },
+      "phase": "defeat",
+      "integrity": 0,
+      "result": true,
+      "title": "核心失守"
+    },
+    {
+      "name": "retry",
+      "game": true,
+      "phase": "prepare",
+      "credits": 220,
+      "towers": 0
+    },
+    {
+      "name": "responsive",
+      "mobileCanvas": {
+        "w": 693.328125,
+        "h": 390,
+        "l": 112.828125,
+        "t": 0
+      },
+      "portrait": {
+        "overlay": "flex",
+        "canvas": {
+          "x": 0,
+          "y": 468.3125,
+          "width": 390,
+          "height": 219.375,
+          "top": 468.3125,
+          "right": 390,
+          "bottom": 687.6875,
+          "left": 0
+        }
+      }
+    }
+  ],
+  "console": [
+    "debug: [vite] connecting...",
+    "debug: [vite] connected.",
+    "debug: [vite] connecting...",
+    "debug: [vite] connected.",
+    "log: %cPhaser v4.2.1 (WebGL | Web Audio)%c https://phaser.io/v4021 color: #ffffff; background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAYAAAAmL5yKAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAARBJREFUeNpi/P//P0OHsPB/BiCoePuWkYFEwALSXJElzMBgLwE2CNkQxgWr/yMr/p8QimlBu5DQ//+8vBBco/ofzAe6imH+qv/53/6jYJAYSA4ZoxoANYTPKhiuCQZwGcJU+e4dqpMmvsDq14krV2MPAxDha2CMKvoXoiE/PBQUDgQD8j82UFae9B9bOIC8B9UD9gIjjIMN7Ns6lWHn4XMoYu62RgxO3tkMjIyMII2MYAOAtmFVhA+ADHf2ycGMRhANjUq8YO+WKWCvgAORIV8CkpDCrzIwsLIymC1qAtuAD4Bsh3sBmqAY3qcGwL2AC4DCpKtzHlgzOLWihwEuzTCN0GhDJHeYC4gByBphACDAAH2dDIxdjr+VAAAAAElFTkSuQmCC\"), linear-gradient(to bottom, #000814, #001d3d, #003566); background-repeat: no-repeat; background-position: 4px center, 0 0; padding: 2px 6px 2px 24px; background: transparent"
+  ],
+  "errors": [],
+  "networkIssues": []
+}
