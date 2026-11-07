@@ -35,7 +35,7 @@
 | REQ-20261107-05 | 2026-11-07 | 四兵种、比例、步态、射击、地图与指挥台重做 | [09-visual-command-overhaul.md](09-visual-command-overhaul.md) | 已实现，浏览器基础验收通过（Codex） |
 | REQ-20261107-06 | 2026-11-07 | 航母更正为人族战列巡航舰；游戏改名星际塔防 | [09-visual-command-overhaul.md](09-visual-command-overhaul.md) 更正 | 已实现并完成基础验收（Codex） |
 | REQ-20261107-07 | 2026-11-07 | 深空战列舰菜单、上下机械风、人族基地与背景音乐 | [10-terran-interface-style.md](10-terran-interface-style.md) | 已实现，基础浏览器验收通过（Codex） |
-| REQ-20261107-08 | 2026-11-07 | 源码同步到 GitHub | 工程交付：源码/文档/项目资源统一提交，忽略本地第三方包 | 已完成提交前测试与构建，执行同步 |
+| REQ-20261107-08 | 2026-11-07 | 源码同步到 GitHub | 工程交付：源码/文档/项目资源统一提交，忽略本地第三方包 | 已验收并推送 origin/main（源码 e57c019） |
 
 ## 3. 需求文档模板
 
