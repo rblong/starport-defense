@@ -42,7 +42,8 @@
 | REQ-20261107-12 | 2026-11-07 | 音效与背景音乐分别设置音量 | [13-music-playback-fix.md](13-music-playback-fix.md) | 已实现，基础浏览器验收通过 |
 | REQ-20261107-13 | 2026-11-07 | 地图杂乱与贴片效果优化 | [12-terrain-and-recoil-fix.md](12-terrain-and-recoil-fix.md) | 已实现，基础浏览器验收通过 |
 | REQ-20261107-14 | 2026-11-07 | 按星际争霸一真实地图质感重做 | [14-classic-terrain-rebuild.md](14-classic-terrain-rebuild.md) | 已实现，视觉待用户确认 |
-| REQ-20261107-15 | 2026-11-07 | 同步源码并总结当前项目与后续关卡方向 | [15-project-summary.md](15-project-summary.md) | 总结已完成，同步中 |
+| REQ-20261107-15 | 2026-11-07 | 同步源码并总结当前项目与后续关卡方向 | [15-project-summary.md](15-project-summary.md) | 已完成，功能提交e3836fe已推送 |
+| REQ-20261107-16 | 2026-11-07 | 更新README、重新截图并结束 | [15-project-summary.md](15-project-summary.md) REQ-16 | 已完成，新截图及README已复核 |
 
 ## 3. 需求文档模板
 

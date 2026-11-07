@@ -26,7 +26,7 @@ for (let i = 0; i < 40; i++) {
   await sleep(250);
 }
 const menuShot = await send('Page.captureScreenshot', { format:'png' });
-fs.writeFileSync('artifacts/screenshots/128-terran-menu.png', Buffer.from(menuShot.data,'base64'));
+fs.writeFileSync('artifacts/screenshots/135-menu-current.png', Buffer.from(menuShot.data,'base64'));
 const menuCheck = await evaluate(`({title:document.title,background:window.__starportGame.textures.exists('terran-menu'),texts:window.__starportGame.scene.getScene('MenuScene').children.list.filter(o=>o.type==='Text').map(o=>o.text)})`);
 if (!menuCheck.title.includes('星际塔防') || !menuCheck.texts.includes('星际塔防') || !menuCheck.background) throw Error('Menu title/background mismatch');
 const startPoint = await evaluate(`(()=>{const r=document.querySelector('#game canvas').getBoundingClientRect();return{x:r.left+183/1280*r.width,y:r.top+363/720*r.height};})()`);
@@ -35,7 +35,7 @@ await send('Input.dispatchMouseEvent',{type:'mouseReleased',...startPoint,button
 await sleep(1100);
 const snapshot = await evaluate(`(()=>{const s=window.__starportScene;const u=s.scene.get('UIScene'); return {cards:u.cards.map(c=>c.unit.id),canvas:[s.game.canvas.width,s.game.canvas.height],pathLength:s.pathData.totalLength,pads:s.pads.length};})()`);
 const shot = async name => { const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync('artifacts/screenshots/'+name, Buffer.from(r.data, 'base64')); };
-await shot('129-classic-terrain.png');
+await shot('136-terrain-current.png');
 const steps = [{name:'Terran menu and game rename',title:menuCheck.title}];
 const assert = (condition, message) => { if (!condition) throw Error(message); };
 const point = async (x, y) => evaluate(`(()=>{const r=document.querySelector('#game canvas').getBoundingClientRect();return {x:r.left+${x}/1280*r.width,y:r.top+${y}/720*r.height};})()`);
@@ -81,14 +81,14 @@ await click(888, 685);
 const after = await evaluate(`({level:window.__starportScene.towers[0].level,scale:window.__starportScene.towers[0].view.body.scaleX})`);
 assert(after.level===2 && after.scale===before, 'Upgrade altered unit scale');
 steps.push('Upgrade works and preserves scale');
-await shot('130-classic-units.png');
+await shot('137-units-current.png');
 const recoil = await evaluate(`(async()=>{const s=window.__starportScene,t=s.towers[0],v=t.view;const start={x:v.container.x,y:v.container.y};let min=Infinity,max=-Infinity;for(const speed of [1,5]){s.tweens.timeScale=speed;for(let i=0;i<100;i++){v.recoil();await new Promise(r=>setTimeout(r,12));min=Math.min(min,v.body.y);max=Math.max(max,v.body.y);}}await new Promise(r=>setTimeout(r,300));s.tweens.timeScale=1;return{start,end:{x:v.container.x,y:v.container.y},min,max,rest:v.body.y,terrain:s.textures.exists('sc-terrain-classic')};})()`);
 assert(recoil.rest===-3&&recoil.min>=-3&&recoil.max<=-.5&&recoil.start.y===recoil.end.y,'Marine recoil drifted');
 assert(recoil.terrain,'Real Jungle terrain did not load');
 steps.push({name:'200 interrupted recoil cycles at 1x/5x retain fixed position; real Jungle tiles loaded',...recoil});
 await evaluate(`(()=>{const s=window.__starportScene;s.speed=1;for(let i=0;i<12;i++)s.spawnEnemy(i%3===0?'brute':'scout',4,200+i*30);return true;})()`);
 await sleep(450);
-await shot('131-classic-combat.png');
+await shot('138-combat-current.png');
 const frames1 = await evaluate(`window.__starportScene.enemies.filter(e=>e.alive).map(e=>({id:e.id,frame:e.view.sprite.frame.name}))`);
 await sleep(280);
 const frames2 = await evaluate(`window.__starportScene.enemies.filter(e=>e.alive).map(e=>({id:e.id,frame:e.view.sprite.frame.name}))`);
@@ -104,7 +104,7 @@ steps.push('Walking changes frames with movement and freezes on pause');
 await click(156, 666);
 const pan = await evaluate(`window.__starportScene.cameraViewX`);
 assert(pan>500, 'Minimap did not pan camera');
-await shot('132-classic-right-sector.png');
+await shot('139-base-current.png');
 steps.push({name:'Minimap pan',viewX:pan});
 // Smoke test the distributable procedural path without touching local files.
 socket.addEventListener('message', e => {
@@ -125,11 +125,11 @@ assert(!fallback.local && fallback.fallback && fallback.cards===4,'Procedural fa
 await evaluate(`(()=>{const s=window.__starportScene;s.readyUnits=['goliath','battlecruiser'];s.emitProduction(true);return true;})()`);
 await drag(674,678,pads[0].x,pads[0].y); await drag(674,678,pads[4].x,pads[4].y);
 await evaluate(`(()=>{const s=window.__starportScene;s.spawnEnemy('scout',5,280);return true;})()`);
-await sleep(250); await shot('133-terrain-fallback.png');
+await sleep(250); await shot('140-fallback-current.png');
 assert(await evaluate(`window.__starportScene.towers.length===2 && window.__starportScene.enemies.length>0`),'Fallback deployment failed');
 steps.push({name:'No local asset pack: four cards, deployment, enemy movement',...fallback});
 await send('Emulation.setDeviceMetricsOverride', { width:844,height:390,deviceScaleFactor:1,mobile:false });
-await sleep(250); await shot('134-mobile-command.png');
+await sleep(250); await shot('141-mobile-current.png');
 await send('Fetch.disable');
 fs.writeFileSync('artifacts/visual-overhaul-verification.json', JSON.stringify({ snapshot, steps, errors }, null, 2));
 console.log(JSON.stringify({ snapshot, steps, errors }, null, 2));
