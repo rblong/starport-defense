@@ -1,0 +1,90 @@
+{
+  "before": {
+    "status": "背景音乐播放中",
+    "paused": false,
+    "time": 0.695821,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0.5,
+    "error": null,
+    "loop": true
+  },
+  "after": {
+    "status": "背景音乐播放中",
+    "paused": false,
+    "time": 1.598841,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0.5,
+    "error": null,
+    "loop": true
+  },
+  "muted": {
+    "status": "总静音已开启",
+    "paused": true,
+    "time": 1.602515,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0,
+    "error": null,
+    "loop": true
+  },
+  "sfxZero": {
+    "status": "背景音乐播放中",
+    "paused": false,
+    "time": 1.864319,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0.5,
+    "error": null,
+    "loop": true
+  },
+  "musicZero": {
+    "status": "音乐音量为零",
+    "paused": true,
+    "time": 1.865927,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0,
+    "error": null,
+    "loop": true
+  },
+  "disabled": {
+    "status": "背景音乐已关闭",
+    "paused": true,
+    "time": 2.088299,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0.5,
+    "error": null,
+    "loop": true
+  },
+  "resumed": {
+    "status": "背景音乐播放中",
+    "paused": false,
+    "time": 2.422518,
+    "duration": 36.923084,
+    "ready": 4,
+    "volume": 0.5,
+    "error": null,
+    "loop": true
+  },
+  "sfxButton": {
+    "sfx": 0.25,
+    "music": 0.5
+  },
+  "musicButton": {
+    "sfx": 0.25,
+    "music": 0.25
+  },
+  "pauseSfx": {
+    "sfx": 0,
+    "music": 0.25,
+    "paused": true
+  },
+  "persisted": {
+    "sfx": 0,
+    "music": 0
+  },
+  "errors": []
+}

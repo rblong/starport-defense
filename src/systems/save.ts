@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS: SettingsData = {
   reducedMotion: false,
   defaultSpeed: 1,
   volume: 0.5,
+  musicVolume: 0.5,
   autoNextWave: false,
 };
 
@@ -85,6 +86,7 @@ function normalizeSettings(value: Partial<SettingsData> | null): SettingsData {
     reducedMotion: typeof value?.reducedMotion === 'boolean' ? value.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     defaultSpeed,
     volume,
+    musicVolume: typeof value?.musicVolume === 'number' && Number.isFinite(value.musicVolume) ? Math.max(0, Math.min(1, value.musicVolume)) : DEFAULT_SETTINGS.musicVolume,
     autoNextWave: typeof value?.autoNextWave === 'boolean' ? value.autoNextWave : false,
   };
 }

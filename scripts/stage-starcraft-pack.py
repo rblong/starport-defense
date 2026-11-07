@@ -187,3 +187,5 @@ if __name__ == "__main__":
     main()
     import runpy
     runpy.run_path(str(ROOT / "scripts" / "stage-motion-pack.py"), run_name="__main__")
+
+    runpy.run_path(str(ROOT / "scripts" / "stage-terrain-pack.py"), run_name="__main__")

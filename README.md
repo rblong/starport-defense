@@ -135,7 +135,7 @@ npm run preview
 - 游戏基础美术、程序化图形、合成音效与中文语音均为项目内生成；语音使用本机 TTS 生成后以 WAV 打包。
 - 可选的星际素材本地包来自 Codex 整理的第三方参考素材，权利归 Blizzard 等相应权利人所有；仅用于本地试玩/开发，**不提交、不随公开仓库或部署产物分发**。公开部署前应移除 `public/assets/sc-local/` 或替换为已授权资源。
 - 本地准备方式：`python scripts/stage-starcraft-pack.py`；无素材包时游戏自动使用程序化 fallback。
-- 不使用、不复制《星际争霸》原版代码、地图或过场内容。
+- 不使用《星际争霸》原版代码；原版地形数据与地图参考图只保留在本地可选素材包，公开版本采用程序化回退。
 
 ## 本轮视觉升级验收（2026-11-07）
 
@@ -148,6 +148,29 @@ npm run preview
 
 游戏名已统一为“星际塔防”；第四兵种更正为人类战列巡航舰 Battlecruiser（舰载激光炮）。菜单使用原创生成的深空战列舰插画，上下控制台统一为金属装甲/铆钉/凹槽式界面。本地可选包中基地使用人族指挥中心，缺包回退工业建筑。
 
-新增原创 36.92 秒循环太空军事氛围音乐：首次点击后播放，菜单和暂停面板有独立“背景音乐”开关，自动保存，跟随总音量与静音，页面隐藏时暂停。音乐由 scripts/generate-orbit-music.py 合成，位于 public/audio/music/terran-orbit.wav；不是游戏原声。
+新增原创 36.92 秒循环太空军事氛围音乐：首次点击后播放，菜单和暂停面板有独立“背景音乐”开关，自动保存，音乐独立音量、总静音，页面隐藏时暂停。音乐由 scripts/generate-orbit-music.py 合成，位于 public/audio/music/terran-orbit.wav；不是游戏原声。
 
 需求见 docs/10-terran-interface-style.md。菜单截图 artifacts/screenshots/116-terran-menu.png；完整基础交互和音乐状态验证见 artifacts/visual-overhaul-verification.json。
+
+
+## 动态菜单、自然地形与独立音量（2026-11-07）
+
+首页地球改为NASA地图的球面投影与独立云层/光照，战列舰为独立透明舰体、航行起伏与动态尾焰；标题采用银蓝与暖金。按钮有悬停/确认声，歌利亚与战列舰缺选中音效时回退Marine，文件播放失败也可回退。
+
+首页与暂停菜单均提供“音效音量”和“音乐音量”，分别按100/75/50/25/0%循环并保存。首次点击或按键后音乐开始，主页显示播放/静音/加载失败状态。音效归零不影响音乐；总声音开关控制两路。
+
+地图使用本地可选Jungle真实图块，过滤无效黑块，通过连续遮罩混合草地、泥土与道路；减少碎石与台地，移除路边石链。缺本地素材仍有自然地形回退。机枪兵连续开火不再累积向下漂移，1x/5x共200次中断动画验证固定位置。
+
+34项单测、类型检查、构建通过；音乐独立音量/保存/播放进度、动态菜单/语音回退、地图/单位基础交互有浏览器记录：artifacts/music-playback-verification.json、artifacts/orbital-menu-verification.json、artifacts/visual-overhaul-verification.json。最新截图119–127；需求11–13和素材出处见docs/11-live-orbital-menu.md、docs/12-terrain-and-recoil-fix.md、docs/13-music-playback-fix.md与public/assets/art/CREDITS.md。
+
+
+## 原版星际一地形重做（2026-11-07，取代上一版地图）
+
+本地地图现使用原始32px纹理、CV5左右成对变体、ISOM草地/泥地连接和连续堆叠岩壁。取消随机透明拼片、放大纹理和多边形高台；部署点改为淡色角标，部署时高亮。路线、32部署点和双屏世界保留。
+
+新增研究资源：[scm-js地图编辑器](https://github.com/scm-js/scm-js)（MIT）与[ISOM地形格式说明](https://docs.scmjs.dev/chk/the-isometric-record-explained/)。编辑器代码仅作本地离线生成，不进入游戏bundle；原版图形只在本地忽略包。生成方法、来源与限制见docs/14-classic-terrain-rebuild.md。
+
+800个ISOM单元连接不匹配0，路线和部署点高地采样0；34项单测与构建通过，浏览器操作回归通过。截图129/132，验收记录artifacts/classic-terrain-verification.json与artifacts/visual-overhaul-verification.json。视觉质感待用户确认。
+
+
+最新完整概览见 [项目总结](docs/15-project-summary.md)：当前玩法、原生地形方案、资源来源、验证边界及后续关卡开发方向。

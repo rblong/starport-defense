@@ -9,6 +9,10 @@
 
 ## 写作用域（避免同时改同一文件）
 
+REQ-20261107-10：Codex按用户确认接管自然地形地图绘制与TowerView后坐力bug修复；继续保留当前路径、点位及玩法。
+
+REQ-20261107-09：用户继续授权Codex调整首页动态地球/战列舰/喷焰、标题配色与按钮音效。本轮Codex负责菜单背景新模块、Boot/Menu、Button/音效、项目美术和相关文档/验收；DSH请勿并发修改这些文件。
+
 ### 最新交接：REQ-20261107-05
 
 用户在 Codex 聊天中明确要求 Codex 优化界面、地图、四兵种及动画。Codex 本轮接管 `src/types.ts`、`src/data/towers.ts`、`src/assets/*`、`src/entities/*`、`src/render/*`、`src/ui/*`、`src/scenes/GameScene.ts` / `UIScene.ts` / 菜单文案、`src/game/constants.ts`、`scripts/stage-starcraft-pack.py`、对应测试，以及需求09/验收文档。DSH 请暂缓编辑这些文件，本轮以需求09为准；此前的写作用域在这些文件上由本段取代。Codex 不提交/推送双方混合改动，不切共享分支。
@@ -59,3 +63,9 @@ Codex 当前负责：
 ## 源码同步授权（2026-11-07）
 
 用户已在Codex聊天中明确要求“源码同步到git”，授权将双方累计工作统一提交并推送origin/main。此授权取代之前等待checkpoint确认与不提交混合改动的临时约定。原始第三方素材包、node_modules和dist继续排除；旧Carrier/Firebat未使用语音保留本地，不纳入本次提交。
+
+Codex 正在修复 REQ-20261107-11 背景音乐，负责 src/main.ts、src/systems/audio.ts、MenuScene 播放提示及对应文档/验收脚本，延续此前视觉与音频写作用域。
+
+REQ-20261107-12 音效/音乐独立音量：Codex 扩展负责 types.ts、save.ts、UIScene暂停设置与save测试。
+
+Codex 继续负责 REQ-14 战场质感重做：battlefield、stage-terrain-pack、PadView、对应文档与浏览器验收。用户否定上一版视觉，不能恢复随机透明拼片或多边形高台。

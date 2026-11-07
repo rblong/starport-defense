@@ -123,8 +123,9 @@ export class UIScene extends Phaser.Scene {
   private pauseSoundButton!: Button;
   private pauseMusicButton!: Button;
   private pauseVolumeButton!: Button;
+  private pauseMusicVolumeButton!: Button;
   private pauseAutoNextButton!: Button;
-  private pauseSoundLabel = '音效：开';
+  private pauseSoundLabel = '总声音：开';
   private autoNextEnabled = false;
   private autoNextState: { active: boolean; remaining: number } = { active: false, remaining: 0 };
   private resultModal!: Phaser.GameObjects.Container;
@@ -895,7 +896,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.pauseModal.add(restartButton.container);
 
-    this.pauseSoundLabel = audio.isMuted() ? '音效：关' : '音效：开';
+    this.pauseSoundLabel = audio.isMuted() ? '总声音：关' : '总声音：开';
     this.pauseSoundButton = new Button(this, {
       x: 490,
       y: 398,
@@ -909,17 +910,17 @@ export class UIScene extends Phaser.Scene {
     this.pauseModal.add(this.pauseSoundButton.container);
     this.pauseMusicButton = new Button(this, { x: 644, y: 398, width: 146, height: 42,
       label: audio.getMusicLabel(), fontSize: 12, accent: COLORS.green,
-      onClick: () => { audio.toggleMusic(); this.pauseMusicButton.setLabel(audio.getMusicLabel()); } });
+      onClick: () => { audio.toggleMusic(); this.pauseMusicButton.setLabel(audio.getMusicLabel()); this.refreshSoundLabels(); } });
     this.pauseModal.add(this.pauseMusicButton.container);
 
 
     this.pauseVolumeButton = new Button(this, {
       x: 490,
       y: 444,
-      width: 300,
+      width: 146,
       height: 42,
       label: audio.getVolumeLabel(),
-      fontSize: 15,
+      fontSize: 12,
       accent: COLORS.amber,
       onClick: () => {
         audio.cycleVolume();
@@ -927,6 +928,10 @@ export class UIScene extends Phaser.Scene {
       },
     });
     this.pauseModal.add(this.pauseVolumeButton.container);
+    this.pauseMusicVolumeButton = new Button(this, { x: 644, y: 444, width: 146, height: 42,
+      label: audio.getMusicVolumeLabel(), fontSize: 12, accent: COLORS.green,
+      onClick: () => { audio.cycleMusicVolume(); this.refreshSoundLabels(); } });
+    this.pauseModal.add(this.pauseMusicVolumeButton.container);
 
     this.pauseAutoNextButton = new Button(this, {
       x: 490,
@@ -1220,11 +1225,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   private refreshSoundLabels(): void {
-    const label = audio.isMuted() ? '音效：关' : '音效：开';
+    const label = audio.isMuted() ? '总声音：关' : '总声音：开';
     this.pauseSoundLabel = label;
     this.pauseSoundButton?.setLabel(label);
     this.soundButton?.setLabel(label);
     this.pauseVolumeButton?.setLabel(audio.getVolumeLabel());
+    this.pauseMusicVolumeButton?.setLabel(audio.getMusicVolumeLabel());
   }
 
   private toggleSound(): void {

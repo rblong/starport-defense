@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../systems/audio';
 import { WORLD_WIDTH, BATTLE_TOP, BATTLE_BOTTOM, GAME_WIDTH, FONT_MONO } from '../game/constants';
 import { LEVEL_ONE, pathToPixels, gridToPixel } from '../data/level01';
 import { gameBus } from '../events';
@@ -10,7 +11,9 @@ export class TacticalMap {
     this.graphics = scene.add.graphics().setDepth(10);
     scene.add.text(24, 599, 'SECTOR 07 / 战术地图', { fontFamily: FONT_MONO, fontSize: '9px', color: '#a4bac1' }).setDepth(11);
     const hit = scene.add.rectangle(94, 657, 148, 84, 0, 0).setDepth(12).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => audio.play('uiHover'));
     hit.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      audio.unlock(); audio.play('click');
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const targetX = Math.max(0, Math.min(WORLD_WIDTH - GAME_WIDTH, (p.x - 20) / 148 * WORLD_WIDTH - GAME_WIDTH / 2));
       gameBus.emit('ui:panCamera', { delta: targetX - this.viewX });

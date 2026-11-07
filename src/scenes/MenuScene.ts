@@ -23,9 +23,11 @@ export class MenuScene extends Phaser.Scene {
   private soundButton!: Button;
   private motionButton!: Button;
   private musicButton!: Button;
+  private musicVolumeButton!: Button;
+  private musicStatus!: Phaser.GameObjects.Text;
   private volumeButton!: Button;
   private autoNextButton!: Button;
-  private soundLabel = '音效：开';
+  private soundLabel = '总声音：开';
   private motionLabel = '动态效果：标准';
   private volumeLabel = '音量：50%';
   private autoNextEnabled = false;
@@ -50,8 +52,8 @@ export class MenuScene extends Phaser.Scene {
     // Armoured human fleet command panel.
     const overline = this.add.text(260,116,'TERRAN EXPEDITIONARY COMMAND', {fontFamily:'Consolas, monospace',fontSize:'10px',color:'#b8a678',letterSpacing:2}).setOrigin(0.5);
     overline.setAlpha(0.9);
-    this.add.text(260,177,'星际塔防', {fontFamily:FONT_FAMILY,fontSize:'58px',fontStyle:'bold',color:'#e0ddc8',stroke:'#171e21',strokeThickness:5,letterSpacing:5}).setOrigin(0.5).setShadow(2,4,'#000000',3,true,true);
-    this.add.text(260,230,'INTERSTELLAR DEFENSE', {fontFamily:'Consolas, monospace',fontSize:'11px',color:'#99aaa6',letterSpacing:3}).setOrigin(0.5);
+    this.add.text(260,177,'星际塔防', {fontFamily:FONT_FAMILY,fontSize:'58px',fontStyle:'bold',color:'#b7cddd',stroke:'#192734',strokeThickness:5,letterSpacing:5}).setOrigin(0.5).setShadow(2,4,'#02060c',3,true,true);
+    this.add.text(260,230,'INTERSTELLAR DEFENSE', {fontFamily:'Consolas, monospace',fontSize:'11px',color:'#c5a769',letterSpacing:3}).setOrigin(0.5);
     const rule = this.add.graphics();rule.lineStyle(1,0xa99465,0.6);rule.lineBetween(110,262,410,262);
     this.add.text(260,286,'人类远征舰队 · NEXUS–7 防御协议',{fontFamily:FONT_FAMILY,fontSize:'12px',color:'#a8b9b1'}).setOrigin(0.5);
 
@@ -129,7 +131,7 @@ export class MenuScene extends Phaser.Scene {
     });
     helpButton.container.setDepth(2);
 
-    this.soundLabel = audio.isMuted() ? '音效：关' : '音效：开';
+    this.soundLabel = audio.isMuted() ? '总声音：关' : '总声音：开';
     this.soundButton = new Button(this, {
       x: 264,
       y: 412,
@@ -140,7 +142,7 @@ export class MenuScene extends Phaser.Scene {
       accent: COLORS.amber,
       onClick: () => {
         const muted = audio.toggleMuted();
-        this.soundLabel = muted ? '音效：关' : '音效：开';
+        this.soundLabel = muted ? '总声音：关' : '总声音：开';
         this.soundButton.setLabel(this.soundLabel);
         if (!muted) audio.play('click');
       },
@@ -199,10 +201,15 @@ export class MenuScene extends Phaser.Scene {
       },
     });
     this.autoNextButton.container.setDepth(2);
-    this.musicButton = new Button(this, { x: 110, y: 574, width: 300, height: 32,
+    this.musicButton = new Button(this, { x: 110, y: 574, width: 146, height: 32,
       label: audio.getMusicLabel(), fontSize: 12, accent: COLORS.green,
-      onClick: () => { audio.toggleMusic(); this.musicButton.setLabel(audio.getMusicLabel()); } });
+      onClick: () => { audio.toggleMusic(); this.musicButton.setLabel(audio.getMusicLabel()); this.soundButton.setLabel(audio.isMuted() ? '总声音：关' : '总声音：开'); this.volumeButton.setLabel(audio.getVolumeLabel()); } });
     this.musicButton.container.setDepth(2);
+    this.musicVolumeButton = new Button(this, { x: 264, y: 574, width: 146, height: 32,
+      label: audio.getMusicVolumeLabel(), fontSize: 12, accent: COLORS.green,
+      onClick: () => { audio.cycleMusicVolume(); this.musicVolumeButton.setLabel(audio.getMusicVolumeLabel()); } });
+    this.musicVolumeButton.container.setDepth(2);
+    this.musicStatus = this.add.text(260, 645, audio.getMusicStatus(), { fontFamily: FONT_FAMILY, fontSize: '11px', color: '#b8c8b6' }).setOrigin(0.5).setDepth(2);
 
 
     this.add
@@ -249,6 +256,8 @@ export class MenuScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.backdrop?.update(delta, this.reducedMotion);
+    this.musicStatus?.setText(audio.getMusicStatus());
+    this.musicVolumeButton?.setLabel(audio.getMusicVolumeLabel());
   }
 
   private createHelpModal(): void {

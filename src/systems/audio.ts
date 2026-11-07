@@ -3,6 +3,7 @@ import type { EnemyId, UnitId } from '../types';
 
 export type SoundName =
   | 'click'
+  | 'uiHover'
   | 'build'
   | 'upgrade'
   | 'sell'
@@ -40,8 +41,10 @@ class AudioSystem {
   private muted = false;
   private musicEnabled = true;
   private musicUnlocked = false;
+  private musicFailed = false;
   private music: HTMLAudioElement | null = null;
   private volume = 0.5;
+  private musicVolume = 0.5;
   private readonly lastPlayed = new Map<SoundName, number>();
   private readonly voiceElements = new Map<string, HTMLAudioElement>();
   private readonly lastVoicePlayed = new Map<string, number>();
@@ -58,6 +61,7 @@ class AudioSystem {
     this.musicEnabled = settings.musicEnabled;
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => this.syncMusic());
     this.volume = Math.max(0, Math.min(1, settings.volume));
+    this.musicVolume = settings.musicVolume;
   }
 
   unlock(): void {
@@ -85,9 +89,22 @@ class AudioSystem {
 
   getMusicLabel(): string { return `背景音乐：${this.musicEnabled ? '开' : '关'}`; }
 
+  getMusicStatus(): string {
+    if (!this.musicEnabled) return '背景音乐已关闭';
+    if (this.muted) return '总静音已开启';
+    if (this.musicVolume <= 0) return '音乐音量为零';
+    if (!this.musicUnlocked) return '点击画面或按键，启用背景音乐';
+    if (this.musicFailed) return '音乐未能播放 · 点击画面重试';
+    return this.music && !this.music.paused && this.music.readyState >= 2 ? '背景音乐播放中' : '背景音乐加载中…';
+  }
+
   toggleMusic(): boolean {
     this.musicEnabled = !this.musicEnabled;
     updateSettings({ musicEnabled: this.musicEnabled });
+    if (this.musicEnabled) {
+      if (this.musicVolume <= 0) this.setMusicVolume(0.5);
+      if (this.muted) this.setMuted(false);
+    }
     this.syncMusic();
     return this.musicEnabled;
   }
@@ -99,11 +116,13 @@ class AudioSystem {
       this.music.loop = true;
       this.music.preload = 'auto';
     }
-    this.music.volume = this.muted ? 0 : this.volume * 0.28;
-    if (this.muted || !this.musicEnabled || this.volume <= 0 || document.hidden) {
+    this.music.volume = this.muted ? 0 : this.musicVolume;
+    if (this.muted || !this.musicEnabled || this.musicVolume <= 0 || document.hidden) {
       this.music.pause();
     } else if (this.music.paused) {
-      void this.music.play().catch(() => { /* Retry on the next real user gesture. */ });
+      void this.music.play().then(() => { this.musicFailed = false; }).catch(() => {
+        this.musicFailed = true;
+      });
     }
   }
 
@@ -116,7 +135,21 @@ class AudioSystem {
   }
 
   getVolumeLabel(): string {
-    return `音量：${Math.round(this.volume * 100)}%`;
+    return `音效音量：${Math.round(this.volume * 100)}%`;
+  }
+
+  getMusicVolumeLabel(): string { return `音乐音量：${Math.round(this.musicVolume * 100)}%`; }
+
+  setMusicVolume(volume: number): void {
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    updateSettings({ musicVolume: this.musicVolume });
+    this.syncMusic();
+  }
+
+  cycleMusicVolume(): void {
+    const levels = [1, 0.75, 0.5, 0.25, 0];
+    const current = levels.findIndex(level => Math.abs(level - this.musicVolume) < 0.01);
+    this.setMusicVolume(levels[(current + 1) % levels.length] ?? 0.5);
   }
 
   setVolume(volume: number): void {
@@ -198,29 +231,35 @@ class AudioSystem {
 
   playVoice(unitId: UnitId, event: VoiceEvent): void {
     if (this.muted || this.volume <= 0) return;
-    if (this.starCraftPack && event === 'select' && (unitId === 'marine' || unitId === 'tank')) {
-      const name = unitId === 'marine' ? 'Marine.selected' : 'Tank.selected';
-      if (this.playExternal(name, 0.9, 1500)) return;
-    }
     const key = `${unitId}-${event}`;
     const now = performance.now();
-    const last = this.lastVoicePlayed.get(key) ?? -1;
-    if (now - last < 1500) return;
+    if (now - (this.lastVoicePlayed.get(key) ?? -Infinity) < 1500) return;
     this.lastVoicePlayed.set(key, now);
-    this.play('radio');
+    const wav = () => this.playVoiceFile(key, event === 'select' && unitId !== 'marine' ? 'marine-select' : undefined);
+    if (this.starCraftPack && event === 'select') {
+      const names: Record<UnitId, string> = { marine: 'Marine.selected', tank: 'Tank.selected', goliath: 'Goliath.selected', battlecruiser: 'BattleCruiser.selected' };
+      const marine = () => {
+        if (!this.playExternal('Marine.selected', 0.9, 1500, wav)) wav();
+      };
+      if (this.playExternal(names[unitId], 0.9, 1500, unitId === 'marine' ? wav : marine)) return;
+      if (unitId !== 'marine' && this.playExternal('Marine.selected', 0.9, 1500, wav)) return;
+    }
+    wav();
+  }
 
+  private playVoiceFile(key: string, fallback?: string): void {
+    if (this.muted || this.volume <= 0) return;
+    this.play('radio');
     let element = this.voiceElements.get(key);
     if (!element) {
       element = new Audio(`${import.meta.env.BASE_URL}audio/voice/${key}.wav`);
-      element.preload = 'auto';
-      this.voiceElements.set(key, element);
+      element.preload = 'auto'; this.voiceElements.set(key, element);
     }
-    element.volume = this.volume * 0.9;
-    element.currentTime = 0;
+    element.volume = this.volume * 0.9; element.currentTime = 0;
     void element.play().catch(() => {
-      // Missing voice asset or autoplay restriction: the radio chirp still
-      // acknowledges the selection.
-      this.play('radio');
+      if (this.muted || this.volume <= 0) return;
+      if (fallback) this.playVoiceFile(fallback);
+      else this.play('radio');
     });
   }
 
@@ -228,7 +267,7 @@ class AudioSystem {
     return `${import.meta.env.BASE_URL}assets/sc-local/audio/${name}.wav`;
   }
 
-  private playExternal(name: string, gain: number, throttleMs: number): boolean {
+  private playExternal(name: string, gain: number, throttleMs: number, onFailure?: () => void): boolean {
     if (!this.starCraftPack || this.muted || this.volume <= 0) return false;
     if (!this.starCraftAudio.has(name)) return false;
     const now = performance.now();
@@ -250,6 +289,7 @@ class AudioSystem {
     };
     void element.play().catch(() => {
       this.activeExternal.delete(element);
+      if (!this.muted && this.volume > 0) onFailure?.();
     });
     return true;
   }
@@ -323,10 +363,13 @@ class AudioSystem {
 
     const now = this.context.currentTime;
     const last = this.lastPlayed.get(sound) ?? -1;
-    if (now - last < 0.045) return;
+    if (now - last < (sound === 'uiHover' ? 0.12 : 0.045)) return;
     this.lastPlayed.set(sound, now);
 
     switch (sound) {
+      case 'uiHover':
+        this.tone({ frequency: 1450, endFrequency: 1750, duration: 0.025, type: 'sine', gain: 0.022 });
+        break;
       case 'autocannon':
         this.noise(0.07, 0.045, 2000);
         this.tone({ frequency: 210, endFrequency: 65, duration: 0.09, type: 'sawtooth', gain: 0.045 });

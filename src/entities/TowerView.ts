@@ -19,12 +19,14 @@ export class TowerView {
   private readonly directionalKey: string | null;
   private readonly flying: boolean;
   private readonly visualSize: number;
+  private readonly restY: number;
   private level: UnitLevel = 1;
 
   constructor(scene: Phaser.Scene, config: TowerConfig, x: number, y: number) {
     this.scene = scene;
     this.accent = config.accent;
     this.flying = config.id === 'battlecruiser';
+    this.restY = this.flying ? -10 : -3;
     this.visualSize = UNIT_SIZE[config.id];
     const directionKey = `sc-${config.id}-directions`;
     this.directionalKey = scene.textures.exists(directionKey) ? directionKey : null;
@@ -41,7 +43,7 @@ export class TowerView {
 
     const shadow = scene.add.ellipse(3, 10, UNIT_SIZE[config.id] * 0.85, UNIT_SIZE[config.id] * 0.35, 0x010509, 0.6);
     this.container.add(shadow);
-    this.body = scene.add.image(0, this.flying ? -10 : -3, this.directionalKey ?? unitTextureKey(scene, config.id));
+    this.body = scene.add.image(0, this.restY, this.directionalKey ?? unitTextureKey(scene, config.id));
     this.body.setScale(this.baseScale);
     this.container.add(this.body);
 
@@ -101,12 +103,14 @@ export class TowerView {
   recoil(): void {
     if (this.flying) return;
     this.scene.tweens.killTweensOf(this.body);
+    this.body.setY(this.restY);
     this.scene.tweens.add({
       targets: this.body,
-      y: this.body.y + 2.5,
+      y: this.restY + 2.5,
       duration: 55,
       yoyo: true,
       ease: 'Quad.Out',
+      onComplete: () => { if (this.body.active) this.body.setY(this.restY); },
     });
   }
 

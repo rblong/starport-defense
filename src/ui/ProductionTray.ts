@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../systems/audio';
 import { fitUnitIcon, unitTextureKey } from '../assets/unitTextures';
 import {
   COLORS,
@@ -149,6 +150,7 @@ export class ProductionTray {
       const hit = scene.add.rectangle(SLOT_SIZE / 2, SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE, 0x000000, 0);
       hit.setInteractive({ useHandCursor: true });
       slot.add(hit);
+      hit.on('pointerover', () => { if(this.slotTypes[i]) audio.play('uiHover'); });
       hit.on('pointerdown', () => this.beginDrag(i));
       this.container.add(slot);
       this.slots.push({ container: slot, bg: slotBg, icon, hit });
@@ -213,6 +215,7 @@ export class ProductionTray {
     if (!this.callbacks.isDeployAllowed()) return;
     const unitId = this.snapshot.ready[index];
     if (!unitId || this.drag) return;
+    audio.unlock(); audio.play('click');
     const pointer = this.scene.input.activePointer;
     const point = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const ghost = this.scene.add.image(point.x, point.y, unitTextureKey(this.scene, unitId));

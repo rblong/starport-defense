@@ -74,6 +74,7 @@ export class TowerCard {
     this.container.add(this.hit);
     this.hit.on('pointerover', () => {
       if (!this.enabled) return;
+      audio.play('uiHover');
       this.hovered = true;
       this.redraw();
     });
@@ -83,6 +84,7 @@ export class TowerCard {
     });
     this.hit.on('pointerdown', () => {
       if (!this.enabled) return;
+      audio.unlock();
       audio.play('click');
       this.onClick(this.tower.id);
     });

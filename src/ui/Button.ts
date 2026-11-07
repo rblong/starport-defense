@@ -78,6 +78,7 @@ export class Button {
 
     this.hitRect.on('pointerover', () => {
       if (!this.enabled) return;
+      audio.play('uiHover');
       this.hovered = true;
       this.redraw();
     });
@@ -87,6 +88,7 @@ export class Button {
     });
     this.hitRect.on('pointerdown', () => {
       if (!this.enabled) return;
+      audio.unlock();
       audio.play('click');
       this.onClick();
     });

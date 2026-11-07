@@ -107,6 +107,7 @@ export interface SettingsData {
   reducedMotion: boolean;
   defaultSpeed: Speed;
   volume: number;
+  musicVolume: number;
   autoNextWave: boolean;
 }
 

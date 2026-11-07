@@ -61,8 +61,8 @@ if (!supportsWebGL2()) {
     const unlockAudio = (): void => {
       audio.unlock();
     };
-    window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
-    window.addEventListener('keydown', unlockAudio, { once: true });
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio);
     window.addEventListener(
       'contextmenu',
       (event) => {
@@ -78,6 +78,8 @@ if (!supportsWebGL2()) {
 
     if (import.meta.hot) {
       import.meta.hot.dispose(() => {
+        window.removeEventListener('pointerdown', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
         game.destroy(true);
       });
     }

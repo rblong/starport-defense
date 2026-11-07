@@ -36,8 +36,16 @@
 | REQ-20261107-06 | 2026-11-07 | 航母更正为人族战列巡航舰；游戏改名星际塔防 | [09-visual-command-overhaul.md](09-visual-command-overhaul.md) 更正 | 已实现并完成基础验收（Codex） |
 | REQ-20261107-07 | 2026-11-07 | 深空战列舰菜单、上下机械风、人族基地与背景音乐 | [10-terran-interface-style.md](10-terran-interface-style.md) | 已实现，基础浏览器验收通过（Codex） |
 | REQ-20261107-08 | 2026-11-07 | 源码同步到 GitHub | 工程交付：源码/文档/项目资源统一提交，忽略本地第三方包 | 已验收并推送 origin/main（源码 e57c019） |
+| REQ-20261107-09 | 2026-11-07 | 动态地球、战列舰喷焰、标题与按钮音效 | [11-live-orbital-menu.md](11-live-orbital-menu.md) | 已实现，基础浏览器验收通过 |
+| REQ-20261107-10 | 2026-11-07 | 星际自然地形素材与机枪兵下移修复 | [12-terrain-and-recoil-fix.md](12-terrain-and-recoil-fix.md) | 已实现，基础浏览器验收通过 |
+| REQ-20261107-11 | 2026-11-07 | 背景音乐听不到 | [13-music-playback-fix.md](13-music-playback-fix.md) | 已实现，基础浏览器验收通过 |
+| REQ-20261107-12 | 2026-11-07 | 音效与背景音乐分别设置音量 | [13-music-playback-fix.md](13-music-playback-fix.md) | 已实现，基础浏览器验收通过 |
+| REQ-20261107-13 | 2026-11-07 | 地图杂乱与贴片效果优化 | [12-terrain-and-recoil-fix.md](12-terrain-and-recoil-fix.md) | 已实现，基础浏览器验收通过 |
+| REQ-20261107-14 | 2026-11-07 | 按星际争霸一真实地图质感重做 | [14-classic-terrain-rebuild.md](14-classic-terrain-rebuild.md) | 已实现，视觉待用户确认 |
+| REQ-20261107-15 | 2026-11-07 | 同步源码并总结当前项目与后续关卡方向 | [15-project-summary.md](15-project-summary.md) | 总结已完成，同步中 |
 
 ## 3. 需求文档模板
+
 
 
 

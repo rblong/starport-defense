@@ -1,0 +1,31 @@
+{
+  "before": {
+    "earth": 871352,
+    "shipX": 870.9050064350624,
+    "shipY": 236.31627095698283,
+    "angle": 0.001030523172479647,
+    "fps": 58.5
+  },
+  "after": {
+    "earth": 873635,
+    "shipX": 875.0553175390235,
+    "shipY": 239.99523566945604,
+    "angle": 0.005502710795077803,
+    "fps": 55.90625
+  },
+  "sounds": {
+    "hover": true,
+    "confirmation": true,
+    "unlocked": "running"
+  },
+  "reducedMotionFrozen": true,
+  "marineVoiceFallback": {
+    "goliath": true,
+    "battlecruiser": true
+  },
+  "failedVoice": {
+    "fallback": true,
+    "muted": true
+  },
+  "errors": []
+}

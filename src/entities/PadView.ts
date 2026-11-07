@@ -6,29 +6,45 @@ export class PadView {
   readonly index: number;
   readonly x: number;
   readonly y: number;
+  private readonly classic: boolean;
+  private highlighted = false;
+  private hovered = false;
 
   constructor(scene: Phaser.Scene, index: number, x: number, y: number) {
     this.index = index;
     this.x = x;
     this.y = y;
-    this.image = scene.add.image(x, y, 'pad');
+    this.classic = scene.textures.exists('sc-terrain-classic');
+    if (this.classic && !scene.textures.exists('field-position')) {
+      for (const active of [false, true]) {
+        const g=scene.add.graphics();g.lineStyle(active ? 1.5 : 1, active ? 0x8ee8d2 : 0xccc5a2, 1);
+        const a=active ? 12 : 18,b=64-a,length=7;
+        for(const [px,py,sx,sy] of [[a,a,1,1],[b,a,-1,1],[a,b,1,-1],[b,b,-1,-1]]) {
+          g.lineBetween(px!,py!+sy!*length,px!,py!);g.lineBetween(px!,py!,px!+sx!*length,py!);
+        }
+        g.generateTexture(active ? 'field-position-active' : 'field-position',64,64);g.destroy();
+      }
+    }
+    this.image = scene.add.image(x, y, this.classic ? 'field-position' : 'pad');
     this.image.setDepth(DEPTH.pads);
-    this.image.setAlpha(0.72);
+    this.image.setAlpha(this.classic ? 0.42 : 0.72);
   }
 
   setBuildHighlight(active: boolean): void {
-    this.image.setTexture(active ? 'pad-hover' : 'pad');
-    this.image.setAlpha(active ? 1 : 0.72);
+    this.highlighted=active;
+    this.refresh();
   }
 
   setHover(hovered: boolean): void {
-    if (hovered) {
-      this.image.setAlpha(1);
-      this.image.setScale(1.06);
-    } else {
-      this.image.setAlpha(0.72);
-      this.image.setScale(1);
-    }
+    this.hovered=hovered;
+    this.refresh();
+  }
+
+  private refresh(): void {
+    const active=this.highlighted || this.hovered;
+    this.image.setTexture(this.classic ? (active ? 'field-position-active' : 'field-position') : (active ? 'pad-hover' : 'pad'));
+    this.image.setAlpha(active ? 1 : this.classic ? 0.42 : 0.72);
+    this.image.setScale(this.hovered ? 1.04 : 1);
   }
 
   setOccupied(occupied: boolean): void {

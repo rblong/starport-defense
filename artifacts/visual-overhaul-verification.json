@@ -22,11 +22,11 @@
       "name": "Original background music initialized after pointer gesture",
       "label": "背景音乐：开",
       "loop": true,
-      "volume": 0.14,
+      "volume": 0.5,
       "playing": true
     },
     {
-      "name": "Music responds to zero volume, mute, and persisted switch",
+      "name": "Music responds to independent music volume, mute, and persisted switch",
       "zero": true,
       "muted": true,
       "disabled": true
@@ -58,6 +58,21 @@
       ]
     },
     "Upgrade works and preserves scale",
+    {
+      "name": "200 interrupted recoil cycles at 1x/5x retain fixed position; real Jungle tiles loaded",
+      "start": {
+        "x": 290,
+        "y": 227
+      },
+      "end": {
+        "x": 290,
+        "y": 227
+      },
+      "min": -3,
+      "max": -0.5,
+      "rest": -3,
+      "terrain": true
+    },
     "Walking changes frames with movement and freezes on pause",
     {
       "name": "Minimap pan",

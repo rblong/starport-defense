@@ -8,6 +8,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image('battlecruiser-hero', `${import.meta.env.BASE_URL}assets/art/battlecruiser-hero.png`);
+    this.load.image('earth-clouds', `${import.meta.env.BASE_URL}assets/art/earth-clouds.jpg`);
+    this.load.image('earth-map', `${import.meta.env.BASE_URL}assets/art/earth-daymap.png`);
     this.load.image('terran-menu', `${import.meta.env.BASE_URL}assets/art/terran-battlecruiser-menu.png`);
   }
 

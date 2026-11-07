@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { createOrbitalMenu } from './orbitalMenu';
 import { GAME_HEIGHT, GAME_WIDTH } from '../game/constants';
 
 export interface BackgroundLayers {
@@ -55,6 +56,7 @@ export function createBackground(scene: Phaser.Scene, worldWidth = GAME_WIDTH): 
 }
 
 export function createMenuBackdrop(scene: Phaser.Scene): BackgroundLayers {
+  if (scene.textures.exists('battlecruiser-hero') && scene.textures.exists('earth-map')) return createOrbitalMenu(scene);
   const image = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'terran-menu').setDepth(-10);
   image.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
   const shade = scene.add.graphics().setDepth(-8);

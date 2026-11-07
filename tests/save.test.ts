@@ -44,6 +44,17 @@ describe('save fallback and progress', () => {
     });
   });
 
+  it('persists independent audio levels and clamps invalid music volume', () => {
+    updateSettings({ volume: 0, musicVolume: 0.75 });
+    expect(loadSettings().volume).toBe(0);
+    expect(loadSettings().musicVolume).toBe(0.75);
+    updateSettings({ volume: 1 });
+    expect(loadSettings().musicVolume).toBe(0.75);
+    expect(updateSettings({ musicVolume: 2 }).musicVolume).toBe(1);
+    expect(updateSettings({ musicVolume: Number.NaN }).musicVolume).toBe(0.5);
+    updateSettings({ volume: 0.5, musicVolume: 0.5 });
+  });
+
   it('keeps the best score and accumulated kills', () => {
     const first = recordRun(1200, false, 5, 20);
     expect(first.bestScore).toBeGreaterThanOrEqual(1200);

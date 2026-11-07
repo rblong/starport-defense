@@ -1,3 +1,4 @@
+import { audio } from '../systems/audio';
 import Phaser from 'phaser';
 import { fitUnitIcon, unitTextureKey } from '../assets/unitTextures';
 import { COLORS, CSS_COLORS, FONT_FAMILY, FONT_MONO } from '../game/constants';
@@ -85,6 +86,7 @@ export class UnitCard {
     this.container.add(this.hit);
     this.hit.on('pointerover', () => {
       if (!this.enabled) return;
+      audio.play('uiHover');
       this.hovered = true;
       this.redraw();
     });
@@ -94,6 +96,8 @@ export class UnitCard {
     });
     this.hit.on('pointerdown', () => {
       if (!this.enabled) return;
+      audio.unlock();
+      audio.play('click');
       this.onClick(this.unit.id);
     });
 

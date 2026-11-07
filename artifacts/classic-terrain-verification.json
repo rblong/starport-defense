@@ -1,0 +1,12 @@
+{
+  "isom": {
+    "rects": 800,
+    "mismatched": 0
+  },
+  "sourcePixels": [
+    2560,
+    640
+  ],
+  "routeHighGroundSamples": [],
+  "padHighGroundCount": 0
+}
