@@ -1,10 +1,13 @@
-export type TowerId = 'pulse' | 'mortar' | 'cryo' | 'arc';
+export type UnitId = 'marine' | 'goliath' | 'tank' | 'battlecruiser';
+/** Kept as an alias while scenes migrate from tower terminology. */
+export type TowerId = UnitId;
 export type EnemyId = 'scout' | 'runner' | 'brute' | 'splitter' | 'shard' | 'elite' | 'boss';
 export type TargetMode = 'first' | 'strongest' | 'nearest';
 export type RunPhase = 'prepare' | 'wave' | 'victory' | 'defeat';
-export type TowerAttackKind = 'projectile' | 'splash' | 'aura' | 'chain';
+export type UnitAttackKind = 'projectile' | 'flame' | 'artillery';
 export type Speed = 1 | 2 | 3 | 4 | 5;
-export type TowerLevel = 1 | 2 | 3;
+export type UnitLevel = 1 | 2 | 3;
+export type TowerLevel = UnitLevel;
 
 export interface Vec2 {
   x: number;
@@ -16,30 +19,41 @@ export interface GridPos {
   row: number;
 }
 
-export interface TowerLevelStats {
+export interface UnitLevelStats {
   damage: number;
   cooldown: number;
   range: number;
   projectileSpeed?: number;
+  coneAngle?: number;
+  burnDps?: number;
+  burnDuration?: number;
   splashRadius?: number;
-  chainCount?: number;
-  chainRadius?: number;
-  chainFalloff?: number;
-  slowFactor?: number;
-  slowDuration?: number;
 }
 
-export interface TowerConfig {
-  id: TowerId;
+export type TowerLevelStats = UnitLevelStats;
+
+export interface UnitVoiceLines {
+  select: string;
+  deploy: string;
+  upgrade: string;
+  retreat: string;
+}
+
+export interface UnitConfig {
+  id: UnitId;
   name: string;
   hotkey: string;
   cost: number;
-  attackKind: TowerAttackKind;
+  buildTime: number;
+  attackKind: UnitAttackKind;
   accent: number;
   description: string;
-  levels: [TowerLevelStats, TowerLevelStats, TowerLevelStats];
+  levels: [UnitLevelStats, UnitLevelStats, UnitLevelStats];
   upgradeCosts: [number, number];
+  voice: UnitVoiceLines;
 }
+
+export type TowerConfig = UnitConfig;
 
 export interface EnemyConfig {
   id: EnemyId;
@@ -89,6 +103,7 @@ export interface LevelConfig {
 export interface SettingsData {
   version: 1;
   soundEnabled: boolean;
+  musicEnabled: boolean;
   reducedMotion: boolean;
   defaultSpeed: Speed;
   volume: number;
@@ -106,7 +121,7 @@ export interface ProgressData {
 export interface HudSnapshot {
   integrity: number;
   maxIntegrity: number;
-  credits: number;
+  crystals: number;
   wave: number;
   totalWaves: number;
   endless: boolean;
@@ -119,12 +134,24 @@ export interface HudSnapshot {
 
 export interface TowerSelection {
   towerId: number;
-  typeId: TowerId;
-  level: TowerLevel;
+  typeId: UnitId;
+  level: UnitLevel;
   targetMode: TargetMode;
   upgradeCost: number | null;
   sellValue: number;
   totalInvested: number;
+}
+
+export interface ProductionActive {
+  typeId: UnitId;
+  remaining: number;
+  duration: number;
+}
+
+export interface ProductionSnapshot {
+  active: ProductionActive | null;
+  queue: UnitId[];
+  ready: UnitId[];
 }
 
 export interface SkillStatus {
@@ -151,7 +178,7 @@ export interface ResultPayload {
   wavesCleared: number;
   kills: number;
   integrity: number;
-  credits: number;
+  crystals: number;
   score: number;
   bestScore: number;
   isNewBest: boolean;
@@ -161,7 +188,7 @@ export interface ModeSnapshot {
   phase: RunPhase;
   paused: boolean;
   speed: Speed;
-  buildTowerId: TowerId | null;
+  deployTypeId: UnitId | null;
   skillAiming: boolean;
-  selectedTowerId: number | null;
+  selectedUnitId: number | null;
 }

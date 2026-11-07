@@ -10,11 +10,14 @@ import {
   MAX_FRAME_DELTA,
   MAX_STEPS_PER_FRAME,
   RENDER_SCALE,
+  WORLD_WIDTH,
   SKILL_COOLDOWN,
   SKILL_DAMAGE,
   SKILL_RADIUS,
   SKILL_TELEGRAPH,
-  START_CREDITS,
+  PRODUCTION_QUEUE_LIMIT,
+  READY_UNIT_LIMIT,
+  START_CRYSTALS,
   START_INTEGRITY,
   STEP_SEC,
   TOTAL_WAVES,
@@ -25,6 +28,8 @@ import type {
   EnemyId,
   HudSnapshot,
   ModeSnapshot,
+  ProductionActive,
+  ProductionSnapshot,
   ResultPayload,
   SkillStatus,
   Speed,
@@ -32,19 +37,22 @@ import type {
   TowerId,
   TowerLevel,
   TowerSelection,
+  UnitId,
   WaveBannerPayload,
 } from '../types';
 import { buildPath, samplePath, type PathData } from '../domain/path';
 import { pickTarget } from '../domain/targeting';
-import { applyArmor, chainDamage, effectiveSlow, shouldApplySlow } from '../domain/combat';
+import { applyArmor } from '../domain/combat';
 import { expandWave, type SpawnEvent } from '../domain/waves';
 import { computeScore } from '../domain/score';
 import { calculateSellValue } from '../domain/economy';
 import { ENEMY_MAP } from '../data/enemies';
 import { getWaveForIndex } from '../data/waves';
-import { TOWER_MAP, getTowerStats } from '../data/towers';
+import { UNIT_MAP, getUnitStats } from '../data/towers';
 import { LEVEL_ONE, gridToPixel, pathToPixels } from '../data/level01';
 import { createBackground, type BackgroundLayers } from '../render/background';
+import { drawStarport } from '../render/battlefield';
+import { unitTextureKey, UNIT_SIZE } from '../assets/unitTextures';
 import { Effects } from '../render/effects';
 import { EnemyView } from '../entities/EnemyView';
 import { TowerView } from '../entities/TowerView';
@@ -92,13 +100,18 @@ export class GameScene extends Phaser.Scene {
   private phase: 'prepare' | 'wave' | 'victory' | 'defeat' = 'prepare';
   private paused = false;
   private speed: Speed = 1;
-  private credits = START_CREDITS;
+  private crystals = START_CRYSTALS;
+  private productionQueue: UnitId[] = [];
+  private activeProduction: ProductionActive | null = null;
+  private readyUnits: UnitId[] = [];
+  private productionDirty = true;
+  private lastProductionEmitAt = -1;
   private integrity = START_INTEGRITY;
   private kills = 0;
   private runTime = 0;
   private skillReadyAt = 0;
   private skillAiming = false;
-  private buildTowerId: TowerId | null = null;
+  private deployTypeId: UnitId | null = null;
   private selectedTowerId: number | null = null;
   private hoveredPadIndex: number | null = null;
   private pathData!: PathData;
@@ -108,6 +121,11 @@ export class GameScene extends Phaser.Scene {
   private nextEnemyId = 1;
   private nextTowerId = 1;
   private nextProjectileId = 1;
+  private cameraViewX = 0;
+  private panStartScreenX = 0;
+  private panLastScreenX = 0;
+  private panMoved = false;
+  private panCandidate = false;
   private accumulator = 0;
   private hudDirty = true;
   private reducedMotion = false;
@@ -143,12 +161,10 @@ export class GameScene extends Phaser.Scene {
     this.speed = settings.defaultSpeed;
     this.reducedMotion = settings.reducedMotion;
     this.autoNextWave = settings.autoNextWave;
+    this.cameraViewX = 0;
     this.cameras.main.setZoom(RENDER_SCALE);
-    this.cameras.main.setScroll(
-      -((RENDER_SCALE - 1) * GAME_WIDTH) / 2,
-      -((RENDER_SCALE - 1) * GAME_HEIGHT) / 2,
-    );
-    this.background = createBackground(this);
+    this.applyCameraView();
+    this.background = createBackground(this, WORLD_WIDTH);
     this.effects = new Effects(this, this.reducedMotion);
 
     this.drawBattlefield();
@@ -170,6 +186,12 @@ export class GameScene extends Phaser.Scene {
     // Ensure the UI receives a complete initial snapshot even if it requests
     // state before the scene launch has fully completed.
     this.time.delayedCall(0, () => this.emitAllState());
+    this.time.delayedCall(1100, () => {
+      gameBus.emit('game:toast', {
+        message: '按住战场左右拖动查看地图，A/D 也可平移',
+        tone: 'info',
+      });
+    });
 
     if (import.meta.env.DEV) {
       (window as unknown as { __starportScene?: GameScene }).__starportScene = this;
@@ -194,6 +216,7 @@ export class GameScene extends Phaser.Scene {
     if (steps === MAX_STEPS_PER_FRAME) this.accumulator = 0;
 
     this.emitSkillStatus();
+    if (this.activeProduction || this.productionDirty) this.emitProduction();
     if (this.hudDirty) this.emitHud();
   }
 
@@ -217,13 +240,21 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'prepare';
     this.paused = false;
     this.speed = 1;
-    this.credits = START_CREDITS;
+    this.crystals = START_CRYSTALS;
+    this.productionQueue = [];
+    this.activeProduction = null;
+    this.readyUnits = [];
+    this.productionDirty = true;
+    this.lastProductionEmitAt = -1;
     this.integrity = START_INTEGRITY;
     this.kills = 0;
     this.runTime = 0;
     this.skillReadyAt = 0;
     this.skillAiming = false;
-    this.buildTowerId = null;
+    this.panCandidate = false;
+    this.panMoved = false;
+    this.cameraViewX = 0;
+    this.deployTypeId = null;
     this.selectedTowerId = null;
     this.hoveredPadIndex = null;
     this.enemyById = new Map();
@@ -245,61 +276,7 @@ export class GameScene extends Phaser.Scene {
     this.pathPixels = pathToPixels(LEVEL_ONE);
     this.pathData = buildPath(this.pathPixels);
 
-    const grid = this.add.graphics().setDepth(DEPTH.path - 1);
-    grid.lineStyle(1, COLORS.cyan, 0.035);
-    for (let col = 0; col <= LEVEL_ONE.cols; col++) {
-      const x = LEVEL_ONE.origin.x + col * LEVEL_ONE.tileSize;
-      grid.beginPath();
-      grid.moveTo(x, BATTLE_TOP);
-      grid.lineTo(x, BATTLE_BOTTOM);
-      grid.strokePath();
-    }
-    for (let row = 0; row <= LEVEL_ONE.rows; row++) {
-      const y = LEVEL_ONE.origin.y + row * LEVEL_ONE.tileSize;
-      grid.beginPath();
-      grid.moveTo(LEVEL_ONE.origin.x, y);
-      grid.lineTo(LEVEL_ONE.origin.x + LEVEL_ONE.cols * LEVEL_ONE.tileSize, y);
-      grid.strokePath();
-    }
-
-    const path = this.add.graphics().setDepth(DEPTH.path);
-    const drawPath = (width: number, color: number, alpha: number) => {
-      path.lineStyle(width, color, alpha);
-      path.beginPath();
-      path.moveTo(this.pathPixels[0]!.x, this.pathPixels[0]!.y);
-      for (let i = 1; i < this.pathPixels.length; i++) {
-        path.lineTo(this.pathPixels[i]!.x, this.pathPixels[i]!.y);
-      }
-      path.strokePath();
-    };
-
-    drawPath(58, 0x01040a, 0.9);
-    drawPath(48, 0x0a1a2f, 1);
-    drawPath(2, COLORS.cyan, 0.18);
-    drawPath(1, COLORS.cyan, 0.08);
-
-    // Energy nodes along the lane for a little life.
-    const dots = this.add.graphics().setDepth(DEPTH.path + 1);
-    for (let distance = 24; distance < this.pathData.totalLength; distance += 34) {
-      const p = samplePath(this.pathData, distance);
-      dots.fillStyle(COLORS.cyan, 0.12);
-      dots.fillCircle(p.x, p.y, 1.6);
-    }
-
-    // A subtle warning strip at the right edge where the core sits.
-    const corePos = gridToPixel(LEVEL_ONE.core);
-    const edge = this.add.graphics().setDepth(DEPTH.path + 1);
-    edge.lineStyle(1, COLORS.cyan, 0.15);
-    edge.strokeCircle(corePos.x, corePos.y, 76);
-
-    const label = this.add.text(LEVEL_ONE.origin.x + 8, BATTLE_TOP + 9, 'NEXUS-7 // 星港防线', {
-      fontFamily: '"Cascadia Mono", "Consolas", monospace',
-      fontSize: '12px',
-      color: '#5b84a8',
-      letterSpacing: 2,
-    });
-    label.setDepth(DEPTH.path + 2);
-    label.setAlpha(0.7);
+    drawStarport(this);
   }
 
   private createPads(): void {
@@ -318,7 +295,8 @@ export class GameScene extends Phaser.Scene {
   private createGhostAndRanges(): void {
     this.selectionRange = this.add.graphics().setDepth(DEPTH.ghost - 2);
     this.ghostRange = this.add.graphics().setDepth(DEPTH.ghost - 1);
-    this.ghostImage = this.add.image(0, 0, 'tower-ghost');
+    this.ghostImage = this.add.image(0, 0, 'unit-ghost');
+    this.ghostImage.setScale(0.9);
     this.ghostImage.setDepth(DEPTH.ghost);
     this.ghostImage.setVisible(false);
     this.ghostImage.setAlpha(0.7);
@@ -327,8 +305,11 @@ export class GameScene extends Phaser.Scene {
   private bindEvents(): void {
     gameBus.on('ui:requestState', this.handleRequestState, this);
     gameBus.on('ui:startWave', this.handleStartWave, this);
-    gameBus.on('ui:selectBuild', this.handleSelectBuild, this);
-    gameBus.on('ui:cancelBuild', this.handleCancelBuild, this);
+    gameBus.on('ui:requestUnit', this.handleRequestUnit, this);
+    gameBus.on('ui:beginDeploy', this.handleBeginDeploy, this);
+    gameBus.on('ui:deployDrag', this.handleDeployDrag, this);
+    gameBus.on('ui:deployAt', this.handleDeployAt, this);
+    gameBus.on('ui:cancelDeploy', this.handleCancelDeploy, this);
     gameBus.on('ui:selectTower', this.handleSelectTower, this);
     gameBus.on('ui:upgradeTower', this.handleUpgrade, this);
     gameBus.on('ui:sellTower', this.handleSell, this);
@@ -338,6 +319,7 @@ export class GameScene extends Phaser.Scene {
     gameBus.on('ui:togglePause', this.handleTogglePause, this);
     gameBus.on('ui:setSpeed', this.handleSetSpeed, this);
     gameBus.on('ui:setAutoNextWave', this.handleSetAutoNextWave, this);
+    gameBus.on('ui:panCamera', this.handlePanCamera, this);
     gameBus.on('ui:restart', this.handleRestart, this);
     gameBus.on('ui:quitMenu', this.handleQuitMenu, this);
   }
@@ -345,6 +327,7 @@ export class GameScene extends Phaser.Scene {
   private bindInput(): void {
     this.input.on('pointermove', this.handlePointerMove, this);
     this.input.on('pointerdown', this.handlePointerDown, this);
+    this.input.on('pointerup', this.handlePointerUp, this);
     this.input.mouse?.disableContextMenu();
   }
 
@@ -353,6 +336,7 @@ export class GameScene extends Phaser.Scene {
     gameBus.offContext(this);
     this.input.off('pointermove', this.handlePointerMove, this);
     this.input.off('pointerdown', this.handlePointerDown, this);
+    this.input.off('pointerup', this.handlePointerUp, this);
   }
 
   // ---------------------------------------------------------------------------
@@ -367,12 +351,46 @@ export class GameScene extends Phaser.Scene {
     this.startWave();
   };
 
-  private readonly handleSelectBuild = (payload: { towerId: TowerId }): void => {
-    this.selectBuild(payload.towerId);
+  private readonly handleRequestUnit = (payload: { unitId: UnitId }): void => {
+    this.requestUnit(payload.unitId);
   };
 
-  private readonly handleCancelBuild = (): void => {
-    this.cancelBuildMode();
+  private readonly handleBeginDeploy = (payload: { unitId: UnitId }): void => {
+    this.beginDeploy(payload.unitId);
+  };
+
+  private readonly handleDeployDrag = (payload: {
+    active: boolean;
+    unitId?: UnitId;
+    pointerX?: number;
+    pointerY?: number;
+  }): void => {
+    if (!payload.active) {
+      this.cancelDeploy();
+      return;
+    }
+    if (payload.unitId && this.readyUnits.includes(payload.unitId)) {
+      this.deployTypeId = payload.unitId;
+      this.refreshPads();
+      this.emitMode();
+    }
+    if (typeof payload.pointerX === 'number' && typeof payload.pointerY === 'number') {
+      const point = this.cameras.main.getWorldPoint(payload.pointerX, payload.pointerY);
+      this.updateDeployGhost(point.x, point.y);
+    }
+  };
+
+  private readonly handleDeployAt = (payload: {
+    unitId: UnitId;
+    pointerX: number;
+    pointerY: number;
+  }): void => {
+    const point = this.cameras.main.getWorldPoint(payload.pointerX, payload.pointerY);
+    this.deployAt(payload.unitId, point.x, point.y);
+  };
+
+  private readonly handleCancelDeploy = (): void => {
+    this.cancelDeploy();
   };
 
   private readonly handleSelectTower = (payload: { towerId: number | null }): void => {
@@ -456,12 +474,24 @@ export class GameScene extends Phaser.Scene {
 
   private readonly handlePointerMove = (pointer: Phaser.Input.Pointer): void => {
     if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
-    if (!this.buildTowerId) {
-      this.hideBuildGhost();
+    if (this.deployTypeId) {
+      const point = this.pointerToDesign(pointer);
+      this.updateDeployGhost(point.x, point.y);
       return;
     }
-    const point = this.pointerToDesign(pointer);
-    this.updateBuildGhost(point.x, point.y);
+    if (!this.panCandidate) return;
+    if (!pointer.isDown) {
+      this.panCandidate = false;
+      this.panMoved = false;
+      return;
+    }
+    if (!this.panMoved) {
+      if (Math.abs(pointer.x - this.panStartScreenX) < 6) return;
+      this.panMoved = true;
+    }
+    const delta = pointer.x - this.panLastScreenX;
+    this.panLastScreenX = pointer.x;
+    this.panCameraBy(-delta / RENDER_SCALE);
   };
 
   private readonly handlePointerDown = (pointer: Phaser.Input.Pointer): void => {
@@ -479,16 +509,27 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.buildTowerId) {
-      const pad = this.findPadAt(point.x, point.y);
-      if (pad) {
-        this.tryBuild(pad);
-      } else {
-        this.showToast('请点击可建造位', 'info');
-      }
+    if (this.deployTypeId) {
+      this.deployAt(this.deployTypeId, point.x, point.y);
       return;
     }
 
+    this.panCandidate = true;
+    this.panMoved = false;
+    this.panStartScreenX = pointer.x;
+    this.panLastScreenX = pointer.x;
+  };
+
+  private readonly handlePointerUp = (pointer: Phaser.Input.Pointer): void => {
+    if (!this.panCandidate) return;
+    const wasPanning = this.panMoved;
+    this.panCandidate = false;
+    this.panMoved = false;
+    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
+    if (wasPanning) return;
+
+    const point = this.pointerToDesign(pointer);
+    if (point.y < BATTLE_TOP || point.y > BATTLE_BOTTOM) return;
     const tower = this.findTowerAt(point.x, point.y);
     this.selectTower(tower?.id ?? null);
   };
@@ -497,6 +538,36 @@ export class GameScene extends Phaser.Scene {
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     return { x: worldPoint.x, y: worldPoint.y };
   }
+
+  private applyCameraView(): void {
+    const maxViewX = Math.max(0, WORLD_WIDTH - GAME_WIDTH);
+    this.cameraViewX = Math.max(0, Math.min(maxViewX, this.cameraViewX));
+    const scrollX = this.cameraViewX - ((RENDER_SCALE - 1) * GAME_WIDTH) / 2;
+    const scrollY = -((RENDER_SCALE - 1) * GAME_HEIGHT) / 2;
+    this.cameras.main.setScroll(scrollX, scrollY);
+    this.emitCameraView();
+  }
+
+  private panCameraBy(delta: number): void {
+    const maxViewX = Math.max(0, WORLD_WIDTH - GAME_WIDTH);
+    const next = Math.max(0, Math.min(maxViewX, this.cameraViewX + delta));
+    if (Math.abs(next - this.cameraViewX) < 0.01) return;
+    this.cameraViewX = next;
+    this.applyCameraView();
+  }
+
+  private emitCameraView(): void {
+    gameBus.emit('game:camera', {
+      viewX: this.cameraViewX,
+      worldWidth: WORLD_WIDTH,
+      viewWidth: GAME_WIDTH,
+    });
+  }
+
+  private readonly handlePanCamera = (payload: { delta: number }): void => {
+    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
+    this.panCameraBy(payload.delta);
+  };
 
   private findPadAt(x: number, y: number): PadView | null {
     let closest: PadView | null = null;
@@ -524,36 +595,36 @@ export class GameScene extends Phaser.Scene {
     return closest;
   }
 
-  private updateBuildGhost(x: number, y: number): void {
-    if (!this.buildTowerId) {
-      this.hideBuildGhost();
+  private updateDeployGhost(x: number, y: number): void {
+    if (!this.deployTypeId) {
+      this.hideDeployGhost();
       return;
     }
     const pad = this.findPadAt(x, y);
     if (!pad) {
       this.hoveredPadIndex = null;
-      this.hideBuildGhost();
-      this.refreshPads();
+      this.hideDeployGhost();
       return;
     }
 
     this.hoveredPadIndex = pad.index;
     this.refreshPads();
 
-    const config = TOWER_MAP[this.buildTowerId];
+    const config = UNIT_MAP[this.deployTypeId];
     const stats = config.levels[0];
     const occupied = this.towers.some((tower) => tower.padIndex === pad.index);
-    const valid = !occupied && this.credits >= config.cost;
-    const color = valid ? config.accent : COLORS.red;
+    const color = occupied ? COLORS.red : config.accent;
 
+    this.ghostImage.setTexture(unitTextureKey(this, this.deployTypeId));
+    this.ghostImage.setScale(UNIT_SIZE[this.deployTypeId] / 88);
     this.ghostImage.setPosition(pad.x, pad.y);
     this.ghostImage.setTint(color);
     this.ghostImage.setVisible(true);
-    this.ghostImage.setAlpha(0.7);
-    this.drawRange(this.ghostRange, pad.x, pad.y, stats.range, color, valid ? 0.08 : 0.06);
+    this.ghostImage.setAlpha(occupied ? 0.35 : 0.7);
+    this.drawRange(this.ghostRange, pad.x, pad.y, stats.range, color, occupied ? 0.05 : 0.08);
   }
 
-  private hideBuildGhost(): void {
+  private hideDeployGhost(): void {
     this.hoveredPadIndex = null;
     this.ghostImage.setVisible(false);
     this.ghostRange.clear();
@@ -561,73 +632,140 @@ export class GameScene extends Phaser.Scene {
   }
 
   private cancelAllTemporaryModes(): void {
-    if (this.buildTowerId) this.cancelBuildMode();
+    if (this.deployTypeId) this.cancelDeploy();
     if (this.skillAiming) this.cancelSkillAim();
     if (this.selectedTowerId !== null) this.selectTower(null);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Build / tower actions
-  // ---------------------------------------------------------------------------
-
-  private selectBuild(towerId: TowerId): void {
-    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
-    if (this.buildTowerId === towerId) {
-      this.cancelBuildMode();
-      return;
-    }
-    const config = TOWER_MAP[towerId];
-    if (this.credits < config.cost) {
-      this.showToast('信用点不足', 'error');
-      audio.play('error');
-      return;
-    }
-    this.buildTowerId = towerId;
-    this.skillAiming = false;
-    this.selectTower(null);
-    this.refreshPads();
-    this.emitMode();
-    this.emitSkillStatus();
-    audio.play('click');
-  }
-
-  private cancelBuildMode(): void {
-    if (!this.buildTowerId) return;
-    this.buildTowerId = null;
-    this.hideBuildGhost();
-    this.refreshPads();
-    this.emitMode();
   }
 
   private refreshPads(): void {
     for (const pad of this.pads) {
       const occupied = this.towers.some((tower) => tower.padIndex === pad.index);
       pad.setOccupied(occupied);
-      pad.setBuildHighlight(Boolean(this.buildTowerId) && !occupied);
-      pad.setHover(this.hoveredPadIndex === pad.index && Boolean(this.buildTowerId));
+      pad.setBuildHighlight(Boolean(this.deployTypeId) && !occupied);
+      pad.setHover(this.hoveredPadIndex === pad.index && Boolean(this.deployTypeId));
     }
   }
 
-  private tryBuild(pad: PadView): void {
-    const towerId = this.buildTowerId;
-    if (!towerId) return;
-    if (this.towers.some((tower) => tower.padIndex === pad.index)) {
-      this.showToast('该建造位已被占用', 'error');
+  // ---------------------------------------------------------------------------
+  // Manufacturing / deployment actions
+  // ---------------------------------------------------------------------------
+
+  private requestUnit(unitId: UnitId): void {
+    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
+    const config = UNIT_MAP[unitId];
+    if (this.crystals < config.cost) {
+      this.showToast('水晶不足', 'error');
       audio.play('error');
       return;
     }
-    const config = TOWER_MAP[towerId];
-    if (this.credits < config.cost) {
-      this.showToast('信用点不足', 'error');
+    if ((this.activeProduction ? 1 : 0) + this.productionQueue.length >= PRODUCTION_QUEUE_LIMIT) {
+      this.showToast('生产队列已满', 'error');
+      audio.play('error');
+      return;
+    }
+    if (this.readyUnits.length >= READY_UNIT_LIMIT) {
+      this.showToast('待部署区已满', 'error');
       audio.play('error');
       return;
     }
 
-    this.credits -= config.cost;
+    this.crystals -= config.cost;
+    this.productionQueue.push(unitId);
+    this.startNextProduction();
+    this.productionDirty = true;
+    audio.play('build');
+    this.emitHud(true);
+    this.emitProduction(true);
+  }
+
+  private startNextProduction(): void {
+    if (this.activeProduction || this.productionQueue.length === 0) return;
+    if (this.readyUnits.length >= READY_UNIT_LIMIT) return;
+    const typeId = this.productionQueue.shift()!;
+    const config = UNIT_MAP[typeId];
+    this.activeProduction = {
+      typeId,
+      remaining: config.buildTime,
+      duration: config.buildTime,
+    };
+    this.productionDirty = true;
+  }
+
+  private updateProduction(dt: number): void {
+    if (!this.activeProduction) {
+      this.startNextProduction();
+      return;
+    }
+    const active = this.activeProduction;
+    active.remaining = Math.max(0, active.remaining - dt);
+    if (active.remaining > 0) return;
+
+    if (this.readyUnits.length < READY_UNIT_LIMIT) {
+      this.readyUnits.push(active.typeId);
+      this.activeProduction = null;
+      this.productionDirty = true;
+      audio.play('ready');
+      this.startNextProduction();
+    } else {
+      this.productionDirty = true;
+    }
+  }
+
+  private emitProduction(force = false): void {
+    const now = performance.now();
+    if (!force && !this.productionDirty && !this.activeProduction) return;
+    if (!force && now - this.lastProductionEmitAt < 100) return;
+    this.lastProductionEmitAt = now;
+    this.productionDirty = false;
+    const snapshot: ProductionSnapshot = {
+      active: this.activeProduction ? { ...this.activeProduction } : null,
+      queue: [...this.productionQueue],
+      ready: [...this.readyUnits],
+    };
+    gameBus.emit('game:production', snapshot);
+  }
+
+  private beginDeploy(unitId: UnitId): void {
+    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
+    if (!this.readyUnits.includes(unitId)) return;
+    this.deployTypeId = unitId;
+    this.skillAiming = false;
+    this.hoveredPadIndex = null;
+    this.selectTower(null, false);
+    this.refreshPads();
+    this.emitMode();
+    this.emitSkillStatus();
+    this.showToast('点击部署点完成部署，右键取消', 'info');
+    audio.play('click');
+  }
+
+  private deployAt(unitId: UnitId, x: number, y: number): void {
+    if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
+    const readyIndex = this.readyUnits.indexOf(unitId);
+    if (readyIndex < 0) {
+      this.cancelDeploy();
+      return;
+    }
+    const pad = this.findPadAt(x, y);
+    if (!pad) {
+      this.showToast('请把单位拖到部署点', 'error');
+      audio.play('error');
+      this.cancelDeploy();
+      return;
+    }
+    if (this.towers.some((tower) => tower.padIndex === pad.index)) {
+      this.showToast('该部署点已被占用', 'error');
+      audio.play('error');
+      this.cancelDeploy();
+      return;
+    }
+
+    this.readyUnits.splice(readyIndex, 1);
+    const config = UNIT_MAP[unitId];
     const view = new TowerView(this, config, pad.x, pad.y);
     const tower: TowerRuntime = {
       id: this.nextTowerId++,
-      typeId: towerId,
+      typeId: unitId,
       config,
       level: 1,
       padIndex: pad.index,
@@ -640,18 +778,35 @@ export class GameScene extends Phaser.Scene {
       view,
     };
     this.towers.push(tower);
-    this.buildTowerId = null;
+    this.deployTypeId = null;
     this.hoveredPadIndex = null;
-    this.hideBuildGhost();
+    this.hideDeployGhost();
     this.refreshPads();
-    this.selectTower(tower.id);
+    this.selectTower(tower.id, false);
     this.effects.ringPulse(pad.x, pad.y, config.accent, 0.2, 0.95, 320);
-    this.effects.floatingText(pad.x, pad.y - 28, `-${config.cost}`, '#ff8a8f');
+    this.effects.floatingText(pad.x, pad.y - 28, '已部署', '#8fffe0');
     audio.play('build');
+    audio.playVoice(unitId, 'deploy');
+    this.startNextProduction();
+    this.productionDirty = true;
+    this.emitProduction(true);
     this.emitHud(true);
+    this.emitMode();
   }
 
-  private selectTower(towerId: number | null): void {
+  private cancelDeploy(): void {
+    if (!this.deployTypeId) return;
+    this.deployTypeId = null;
+    this.hideDeployGhost();
+    this.refreshPads();
+    this.emitMode();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Unit actions
+  // ---------------------------------------------------------------------------
+
+  private selectTower(towerId: number | null, playVoice = true): void {
     const tower = towerId === null ? null : this.towers.find((item) => item.id === towerId) ?? null;
     this.selectedTowerId = tower?.id ?? null;
     for (const item of this.towers) {
@@ -659,9 +814,12 @@ export class GameScene extends Phaser.Scene {
     }
     this.selectionRange.clear();
     if (tower) {
-      const stats = getTowerStats(tower.typeId, tower.level);
+      const stats = getUnitStats(tower.typeId, tower.level);
       this.drawRange(this.selectionRange, tower.x, tower.y, stats.range, tower.config.accent, 0.055);
       audio.play('click');
+      if (playVoice) {
+        audio.playVoice(tower.typeId, 'select');
+      }
     }
     this.emitSelection();
     this.emitMode();
@@ -671,17 +829,17 @@ export class GameScene extends Phaser.Scene {
     const tower = this.getSelectedTower();
     if (!tower) return;
     if (tower.level >= 3) {
-      this.showToast('该防御塔已满级', 'info');
+      this.showToast('该单位已满级', 'info');
       audio.play('error');
       return;
     }
     const cost = tower.config.upgradeCosts[tower.level - 1];
-    if (this.credits < cost) {
-      this.showToast('信用点不足', 'error');
+    if (this.crystals < cost) {
+      this.showToast('水晶不足', 'error');
       audio.play('error');
       return;
     }
-    this.credits -= cost;
+    this.crystals -= cost;
     tower.totalInvested += cost;
     tower.level = (tower.level + 1) as TowerLevel;
     tower.view.setLevel(tower.level);
@@ -689,7 +847,8 @@ export class GameScene extends Phaser.Scene {
     this.effects.ringPulse(tower.x, tower.y, tower.config.accent, 0.25, 1.1, 360);
     this.effects.floatingText(tower.x, tower.y - 28, `-${cost}`, '#ff8a8f');
     audio.play('upgrade');
-    this.selectTower(tower.id);
+    audio.playVoice(tower.typeId, 'upgrade');
+    this.selectTower(tower.id, false);
     this.emitHud(true);
   }
 
@@ -697,7 +856,7 @@ export class GameScene extends Phaser.Scene {
     const tower = this.getSelectedTower();
     if (!tower) return;
     const refund = calculateSellValue(tower.totalInvested);
-    this.credits += refund;
+    this.crystals += refund;
     const index = this.towers.findIndex((item) => item.id === tower.id);
     if (index >= 0) this.towers.splice(index, 1);
     tower.view.destroy();
@@ -707,6 +866,10 @@ export class GameScene extends Phaser.Scene {
     this.effects.ringPulse(tower.x, tower.y, COLORS.amber, 0.2, 0.9, 300);
     this.effects.floatingText(tower.x, tower.y - 28, `+${refund}`, '#ffd278');
     audio.play('sell');
+    audio.playVoice(tower.typeId, 'retreat');
+    this.startNextProduction();
+    this.productionDirty = true;
+    this.emitProduction(true);
     this.emitSelection();
     this.emitMode();
     this.emitHud(true);
@@ -743,10 +906,10 @@ export class GameScene extends Phaser.Scene {
       audio.play('error');
       return;
     }
-    if (this.buildTowerId) this.cancelBuildMode();
-    this.selectTower(null);
+    if (this.deployTypeId) this.cancelDeploy();
+    this.selectTower(null, false);
     this.skillAiming = true;
-    this.hideBuildGhost();
+    this.hideDeployGhost();
     this.emitMode();
     this.emitSkillStatus();
     audio.play('click');
@@ -787,16 +950,16 @@ export class GameScene extends Phaser.Scene {
     this.waveElapsed = 0;
     this.spawnCursor = 0;
     this.pendingSpawns = expandWave(wave);
-    this.buildTowerId = null;
+    this.deployTypeId = null;
     this.skillAiming = false;
     this.hoveredPadIndex = null;
-    this.hideBuildGhost();
+    this.hideDeployGhost();
     this.refreshPads();
 
     const isBoss = wave.groups.some((group) => group.enemyId === 'boss');
     const banner: WaveBannerPayload = {
-      title: isBoss ? '最终波 · 虚空母舰' : `第 ${wave.index} 波`,
-      subtitle: isBoss ? '击毁母舰，守住星港' : this.endless ? '无尽虫潮，持续增援' : '虫群信号接近中',
+      title: isBoss ? '最终波 · 雷兽' : `第 ${wave.index} 波`,
+      subtitle: isBoss ? '击杀雷兽，守住星港' : this.endless ? '无尽虫潮，持续增援' : '虫群信号接近中',
       tone: isBoss ? 'boss' : 'wave',
     };
     gameBus.emit('game:waveBanner', banner);
@@ -833,6 +996,8 @@ export class GameScene extends Phaser.Scene {
       speed: config.speed,
       slowFactor: 0,
       slowUntil: 0,
+      burnDps: 0,
+      burnUntil: 0,
       alive: true,
       deathQueued: false,
       leaked: false,
@@ -869,6 +1034,20 @@ export class GameScene extends Phaser.Scene {
   private updateEnemies(dt: number): void {
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
+
+      if (enemy.burnUntil > this.runTime && enemy.burnDps > 0) {
+        enemy.hp -= enemy.burnDps * dt;
+        enemy.candidate.hp = enemy.hp;
+        enemy.view.setHp(Math.max(0, enemy.hp / enemy.maxHp));
+        if (enemy.hp <= 0) {
+          this.queueDeath(enemy, false);
+          continue;
+        }
+      } else if (enemy.burnUntil <= this.runTime) {
+        enemy.burnDps = 0;
+        enemy.burnUntil = 0;
+        enemy.view.setBurning(false);
+      }
 
       if (this.runTime >= enemy.slowUntil && enemy.slowFactor > 0) {
         enemy.slowFactor = 0;
@@ -920,36 +1099,8 @@ export class GameScene extends Phaser.Scene {
 
   private updateTowers(dt: number): void {
     for (const tower of this.towers) {
-      const stats = getTowerStats(tower.typeId, tower.level);
+      const stats = getUnitStats(tower.typeId, tower.level);
       tower.cooldown -= dt;
-
-      if (tower.typeId === 'cryo') {
-        if (tower.cooldown > 0) continue;
-        let hitAny = false;
-        for (const enemy of this.enemies) {
-          if (!enemy.alive) continue;
-          if (Math.hypot(enemy.x - tower.x, enemy.y - tower.y) > stats.range) continue;
-          hitAny = true;
-          this.damageEnemy(enemy, stats.damage, false, tower.config.accent);
-          if (stats.slowFactor && stats.slowDuration) {
-            const slow = effectiveSlow(stats.slowFactor, enemy.config.slowResist);
-            if (shouldApplySlow(slow, enemy.slowFactor, enemy.slowUntil, this.runTime)) {
-              enemy.slowFactor = slow;
-              enemy.slowUntil = this.runTime + stats.slowDuration;
-              enemy.view.setSlowed(true);
-            }
-          }
-        }
-        if (hitAny) {
-          tower.view.auraPulse();
-          this.effects.ringPulse(tower.x, tower.y, tower.config.accent, 0.25, stats.range / 64, 450);
-          audio.play('arc');
-          tower.cooldown = stats.cooldown;
-        } else {
-          tower.cooldown = 0;
-        }
-        continue;
-      }
 
       let target = tower.targetId === null ? null : this.enemyById.get(tower.targetId) ?? null;
       if (target && (!target.alive || Math.hypot(target.x - tower.x, target.y - tower.y) > stats.range)) {
@@ -970,7 +1121,7 @@ export class GameScene extends Phaser.Scene {
         tower.targetId = picked?.id ?? null;
         target = picked ? this.enemyById.get(picked.id) ?? null : null;
         if (target) {
-          this.fireTower(tower, target, stats);
+          this.fireUnit(tower, target, stats);
           tower.cooldown = stats.cooldown;
         }
       }
@@ -983,17 +1134,50 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private fireTower(
+  private fireUnit(
     tower: TowerRuntime,
     target: EnemyRuntime,
-    stats: ReturnType<typeof getTowerStats>,
+    stats: ReturnType<typeof getUnitStats>,
   ): void {
     if (!target.alive) return;
-    if (tower.typeId === 'pulse') {
-      const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
-      const x = tower.x + Math.cos(angle) * 22;
-      const y = tower.y + Math.sin(angle) * 22;
-      const view = this.add.image(x, y, 'bolt').setDepth(DEPTH.projectiles).setRotation(angle);
+    const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
+    this.effects.weaponFire(tower.x, tower.y, target.x, target.y, tower.typeId);
+
+    if (tower.config.attackKind === 'artillery') {
+      const startX = tower.x;
+      const startY = tower.y;
+      const endX = target.x;
+      const endY = target.y;
+      const distance = Math.max(30, Math.hypot(endX - startX, endY - startY));
+      const duration = Math.max(0.35, distance / (stats.projectileSpeed ?? 400));
+      const view = this.add.image(startX, startY, 'shell').setDepth(DEPTH.projectiles).setScale(1.2);
+      const projectile: ShellProjectile = {
+        kind: 'shell',
+        id: this.nextProjectileId++,
+        x: startX,
+        y: startY,
+        damage: stats.damage,
+        color: tower.config.accent,
+        startX,
+        startY,
+        endX,
+        endY,
+        elapsed: 0,
+        duration,
+        splashRadius: stats.splashRadius ?? 70,
+        view,
+      };
+      this.projectiles.push(projectile);
+      this.effects.muzzle(tower.x, tower.y, angle, tower.config.accent);
+      tower.view.recoil();
+      audio.play('mortar');
+      return;
+    }
+
+    if (tower.config.attackKind === 'projectile') {
+      const x = tower.x + Math.cos(angle) * 24;
+      const y = tower.y + Math.sin(angle) * 24;
+      const view = this.add.image(x, y, 'bolt').setDepth(DEPTH.projectiles).setRotation(angle).setTint(tower.typeId === 'goliath' ? 0xffc76a : tower.typeId === 'battlecruiser' ? 0xff795c : 0xffe6ae);
       const projectile: BoltProjectile = {
         kind: 'bolt',
         id: this.nextProjectileId++,
@@ -1008,106 +1192,33 @@ export class GameScene extends Phaser.Scene {
       this.projectiles.push(projectile);
       this.effects.muzzle(tower.x, tower.y, angle, tower.config.accent);
       tower.view.recoil();
-      audio.play('pulse');
+      audio.play(tower.typeId === 'goliath' ? 'autocannon' : tower.typeId === 'battlecruiser' ? 'shipLaser' : 'pulse');
       return;
     }
 
-    if (tower.typeId === 'mortar') {
-      const startX = tower.x;
-      const startY = tower.y;
-      const endX = target.x;
-      const endY = target.y;
-      const distance = Math.max(30, Math.hypot(endX - startX, endY - startY));
-      const duration = Math.max(0.35, distance / (stats.projectileSpeed ?? 380));
-      const view = this.add.image(startX, startY, 'shell').setDepth(DEPTH.projectiles);
-      const projectile: ShellProjectile = {
-        kind: 'shell',
-        id: this.nextProjectileId++,
-        x: startX,
-        y: startY,
-        damage: stats.damage,
-        color: tower.config.accent,
-        startX,
-        startY,
-        endX,
-        endY,
-        elapsed: 0,
-        duration,
-        splashRadius: stats.splashRadius ?? 60,
-        view,
-      };
-      this.projectiles.push(projectile);
-      const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
-      this.effects.muzzle(tower.x, tower.y, angle, tower.config.accent);
-      tower.view.recoil();
-      audio.play('mortar');
-      return;
-    }
-
-    if (tower.typeId === 'arc') {
-      this.fireArc(tower, target, stats);
-    }
-  }
-
-  private fireArc(
-    tower: TowerRuntime,
-    primary: EnemyRuntime,
-    stats: ReturnType<typeof getTowerStats>,
-  ): void {
-    const count = stats.chainCount ?? 3;
-    const radius = stats.chainRadius ?? 110;
-    const falloff = stats.chainFalloff ?? 0.65;
-    const hitIds = new Set<number>();
-    const points: Array<{ x: number; y: number }> = [{ x: tower.x, y: tower.y }];
-    let current: EnemyRuntime | null = primary;
-
-    for (let jump = 0; jump < count && current; jump++) {
-      hitIds.add(current.id);
-      this.damageEnemy(current, chainDamage(stats.damage, jump, falloff), false, tower.config.accent);
-      points.push({ x: current.x, y: current.y });
-      this.effects.hitSpark(current.x, current.y, tower.config.accent);
-      current = this.findChainTarget(current, radius, hitIds);
-    }
-
-    if (points.length > 1) {
-      const graphics = this.add.graphics().setDepth(DEPTH.projectiles + 2);
-      graphics.lineStyle(6, tower.config.accent, 0.18);
-      this.strokeLightning(graphics, points);
-      graphics.lineStyle(2, COLORS.white, 0.9);
-      this.strokeLightning(graphics, points);
-      this.tweens.add({ targets: graphics, alpha: 0, duration: 220, onComplete: () => graphics.destroy() });
-    }
-
-    tower.view.recoil();
-    audio.play('arc');
-  }
-
-  private findChainTarget(from: EnemyRuntime, radius: number, hitIds: Set<number>): EnemyRuntime | null {
-    let closest: EnemyRuntime | null = null;
-    let bestDistance = radius;
+    const coneRadians = ((stats.coneAngle ?? 100) * Math.PI) / 180;
     for (const enemy of this.enemies) {
-      if (!enemy.alive || hitIds.has(enemy.id)) continue;
-      const distance = Math.hypot(enemy.x - from.x, enemy.y - from.y);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        closest = enemy;
+      if (!enemy.alive) continue;
+      const distance = Math.hypot(enemy.x - tower.x, enemy.y - tower.y);
+      if (distance > stats.range) continue;
+      const enemyAngle = Math.atan2(enemy.y - tower.y, enemy.x - tower.x);
+      if (Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - angle)) > coneRadians / 2) continue;
+      this.damageEnemy(enemy, stats.damage, false, tower.config.accent);
+      if (stats.burnDps && stats.burnDuration) {
+        this.applyBurn(enemy, stats.burnDps, stats.burnDuration);
       }
     }
-    return closest;
+
+    this.effects.flameCone(tower.x, tower.y, angle, stats.range, coneRadians, tower.config.accent);
+    this.effects.muzzle(tower.x, tower.y, angle, tower.config.accent);
+    tower.view.recoil();
+    audio.play('flame');
   }
 
-  private strokeLightning(graphics: Phaser.GameObjects.Graphics, points: Array<{ x: number; y: number }>): void {
-    graphics.beginPath();
-    graphics.moveTo(points[0]!.x, points[0]!.y);
-    for (let i = 1; i < points.length; i++) {
-      const from = points[i - 1]!;
-      const to = points[i]!;
-      const midX = (from.x + to.x) / 2 + (Math.random() - 0.5) * 18;
-      const midY = (from.y + to.y) / 2 + (Math.random() - 0.5) * 18;
-      graphics.lineTo(midX, midY);
-      graphics.lineTo(to.x, to.y);
-    }
-    graphics.strokePath();
+  private applyBurn(enemy: EnemyRuntime, dps: number, duration: number): void {
+    enemy.burnDps = Math.max(enemy.burnDps, dps);
+    enemy.burnUntil = Math.max(enemy.burnUntil, this.runTime + duration);
+    enemy.view.setBurning(true);
   }
 
   private updateProjectiles(dt: number): void {
@@ -1207,7 +1318,7 @@ export class GameScene extends Phaser.Scene {
         });
         if (this.integrity <= 0) defeat = true;
       } else {
-        this.credits += enemy.config.reward;
+        this.crystals += enemy.config.reward;
         this.kills++;
         this.effects.explosion(
           x,
@@ -1216,13 +1327,14 @@ export class GameScene extends Phaser.Scene {
           enemy.config.isBoss ? 1.8 : enemy.config.isElite ? 1.2 : 0.55,
         );
         this.effects.floatingText(x, y - 22, `+${enemy.config.reward}`, '#ffd278');
+        const scDeath = audio.playEnemyDeath(enemy.config.id);
         if (enemy.config.isBoss) {
-          audio.play('explode');
-          gameBus.emit('game:toast', { message: '虚空母舰已摧毁', tone: 'success' });
+          if (!scDeath) audio.play('explode');
+          gameBus.emit('game:toast', { message: '雷兽已被击杀', tone: 'success' });
         } else if (enemy.config.isElite) {
-          audio.play('explode');
+          if (!scDeath) audio.play('explode');
         } else {
-          audio.play('hit');
+          if (!scDeath) audio.play('hit');
         }
         if (enemy.config.splitInto) {
           splits.push({
@@ -1266,9 +1378,9 @@ export class GameScene extends Phaser.Scene {
     this.waveActive = false;
     this.wavesCleared = Math.max(this.wavesCleared, this.currentWaveIndex);
     const bonus = waveClearBonus(this.currentWaveIndex);
-    this.credits += bonus;
-    this.effects.floatingText(640, 420, `+${bonus} 信用点`, '#ffd278');
-    gameBus.emit('game:toast', { message: `第 ${this.currentWaveIndex} 波已清除  +${bonus} 信用点`, tone: 'success' });
+    this.crystals += bonus;
+    this.effects.floatingText(640, 420, `+${bonus} 水晶`, '#ffd278');
+    gameBus.emit('game:toast', { message: `第 ${this.currentWaveIndex} 波已清除  +${bonus} 水晶`, tone: 'success' });
     audio.play('wave');
 
     if (!this.endless && this.currentWaveIndex >= TOTAL_WAVES) {
@@ -1326,9 +1438,9 @@ export class GameScene extends Phaser.Scene {
     this.waveActive = false;
     this.paused = false;
     this.skillAiming = false;
-    this.buildTowerId = null;
+    this.deployTypeId = null;
     this.hoveredPadIndex = null;
-    this.hideBuildGhost();
+    this.hideDeployGhost();
     this.selectionRange.clear();
     this.selectedTowerId = null;
     for (const tower of this.towers) tower.view.setSelected(false);
@@ -1338,7 +1450,7 @@ export class GameScene extends Phaser.Scene {
       wavesCleared: victory ? TOTAL_WAVES : this.wavesCleared,
       kills: this.kills,
       integrity: this.integrity,
-      credits: this.credits,
+      crystals: this.crystals,
       victory,
     });
     const record = recordRun(score, victory, waveReached, this.kills);
@@ -1359,7 +1471,7 @@ export class GameScene extends Phaser.Scene {
       audio.play('lose');
       gameBus.emit('game:waveBanner', {
         title: '核心失守',
-        subtitle: '星港防线已崩溃',
+        subtitle: '星际塔防已崩溃',
         tone: 'defeat',
       });
     }
@@ -1377,7 +1489,7 @@ export class GameScene extends Phaser.Scene {
       wavesCleared: victory ? TOTAL_WAVES : this.wavesCleared,
       kills: this.kills,
       integrity: this.integrity,
-      credits: this.credits,
+      crystals: this.crystals,
       score,
       bestScore: record.bestScore,
       isNewBest: record.isNewBest,
@@ -1393,6 +1505,7 @@ export class GameScene extends Phaser.Scene {
     this.updateEnemies(dt);
     this.updateTowers(dt);
     this.updateProjectiles(dt);
+    this.updateProduction(dt);
     this.processDeaths();
 
     if (this.phase !== 'wave' || !this.waveActive) return;
@@ -1407,9 +1520,11 @@ export class GameScene extends Phaser.Scene {
     if (this.paused || this.phase === 'victory' || this.phase === 'defeat') return;
     this.paused = true;
     this.skillAiming = false;
-    this.buildTowerId = null;
+    this.panCandidate = false;
+    this.panMoved = false;
+    this.deployTypeId = null;
     this.hoveredPadIndex = null;
-    this.hideBuildGhost();
+    this.hideDeployGhost();
     this.refreshPads();
     this.emitHud(true);
     this.emitMode();
@@ -1446,7 +1561,7 @@ export class GameScene extends Phaser.Scene {
     const snapshot: HudSnapshot = {
       integrity: this.integrity,
       maxIntegrity: START_INTEGRITY,
-      credits: this.credits,
+      crystals: this.crystals,
       wave: this.getDisplayWave(),
       totalWaves: TOTAL_WAVES,
       endless: this.endless,
@@ -1465,9 +1580,9 @@ export class GameScene extends Phaser.Scene {
       phase: this.phase,
       paused: this.paused,
       speed: this.speed,
-      buildTowerId: this.buildTowerId,
+      deployTypeId: this.deployTypeId,
       skillAiming: this.skillAiming,
-      selectedTowerId: this.selectedTowerId,
+      selectedUnitId: this.selectedTowerId,
     };
     gameBus.emit('game:mode', mode);
   }
@@ -1536,6 +1651,8 @@ export class GameScene extends Phaser.Scene {
     this.emitSelection();
     this.emitSkillStatus(true);
     this.emitAutoNextStatus(true);
+    this.emitProduction(true);
+    this.emitCameraView();
     this.emitBossStatus();
   }
 

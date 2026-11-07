@@ -2,12 +2,13 @@ import Phaser from 'phaser';
 import type {
   HudSnapshot,
   ModeSnapshot,
+  ProductionSnapshot,
   ResultPayload,
   SkillStatus,
   ToastPayload,
-  TowerId,
   TowerSelection,
   TargetMode,
+  UnitId,
   WaveBannerPayload,
   Speed,
 } from './types';
@@ -17,8 +18,11 @@ export type EmptyPayload = Record<string, never>;
 export interface GameEventMap {
   'ui:requestState': EmptyPayload;
   'ui:startWave': EmptyPayload;
-  'ui:selectBuild': { towerId: TowerId };
-  'ui:cancelBuild': EmptyPayload;
+  'ui:requestUnit': { unitId: UnitId };
+  'ui:beginDeploy': { unitId: UnitId };
+  'ui:deployDrag': { active: boolean; unitId?: UnitId; pointerX?: number; pointerY?: number };
+  'ui:deployAt': { unitId: UnitId; pointerX: number; pointerY: number };
+  'ui:cancelDeploy': EmptyPayload;
   'ui:selectTower': { towerId: number | null };
   'ui:upgradeTower': EmptyPayload;
   'ui:sellTower': EmptyPayload;
@@ -28,12 +32,15 @@ export interface GameEventMap {
   'ui:togglePause': EmptyPayload;
   'ui:setSpeed': { speed: Speed };
   'ui:setAutoNextWave': { enabled: boolean };
+  'ui:panCamera': { delta: number };
   'ui:restart': EmptyPayload;
   'ui:quitMenu': EmptyPayload;
 
   'game:hud': HudSnapshot;
   'game:mode': ModeSnapshot;
   'game:selection': TowerSelection | null;
+  'game:production': ProductionSnapshot;
+  'game:camera': { viewX: number; worldWidth: number; viewWidth: number };
   'game:skill': SkillStatus;
   'game:autoNext': { active: boolean; remaining: number };
   'game:waveBanner': WaveBannerPayload;

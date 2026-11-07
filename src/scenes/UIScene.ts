@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { enemyPreviewScale, enemyTextureKey } from '../assets/enemyTextures';
 import {
   COLORS,
   CSS_COLORS,
@@ -9,7 +10,7 @@ import {
   HUD_HEIGHT,
   RENDER_SCALE,
   SPEED_LEVELS,
-  START_CREDITS,
+  START_CRYSTALS,
   START_INTEGRITY,
   TOTAL_WAVES,
   BUILD_BAR_Y,
@@ -20,17 +21,20 @@ import { gameBus } from '../events';
 import type {
   HudSnapshot,
   ModeSnapshot,
+  ProductionSnapshot,
   ResultPayload,
   SkillStatus,
   TargetMode,
-  TowerId,
   TowerSelection,
+  UnitId,
   WaveBannerPayload,
 } from '../types';
-import { TOWER_MAP, getTowerStats } from '../data/towers';
+import { UNIT_MAP, getUnitStats } from '../data/towers';
 import { getWaveForIndex } from '../data/waves';
 import { Button } from '../ui/Button';
-import { TowerCard } from '../ui/TowerCard';
+import { TacticalMap } from '../ui/TacticalMap';
+import { UnitCard } from '../ui/UnitCard';
+import { ProductionTray } from '../ui/ProductionTray';
 import { sharpenSceneText } from '../ui/sharpenText';
 import { audio } from '../systems/audio';
 import { loadSettings, updateSettings } from '../systems/save';
@@ -45,7 +49,7 @@ export class UIScene extends Phaser.Scene {
   private hud: HudSnapshot = {
     integrity: START_INTEGRITY,
     maxIntegrity: START_INTEGRITY,
-    credits: START_CREDITS,
+    crystals: START_CRYSTALS,
     wave: 1,
     totalWaves: TOTAL_WAVES,
     endless: false,
@@ -59,11 +63,13 @@ export class UIScene extends Phaser.Scene {
     phase: 'prepare',
     paused: false,
     speed: 1,
-    buildTowerId: null,
+    deployTypeId: null,
     skillAiming: false,
-    selectedTowerId: null,
+    selectedUnitId: null,
   };
   private selection: TowerSelection | null = null;
+  private production: ProductionSnapshot = { active: null, queue: [], ready: [] };
+  private cameraState = { viewX: 0, worldWidth: 0, viewWidth: GAME_WIDTH };
   private skill: SkillStatus = { ratio: 0, ready: true, aiming: false };
   private bossState: { visible: boolean; name: string; ratio: number } | null = null;
   private result: ResultPayload | null = null;
@@ -81,7 +87,11 @@ export class UIScene extends Phaser.Scene {
   private skillButton!: Button;
   private startWaveButton!: Button;
   private skillCooldownBar!: Phaser.GameObjects.Graphics;
-  private cards: TowerCard[] = [];
+  private tacticalMap?: TacticalMap;
+  private cameraRail!: Phaser.GameObjects.Graphics;
+  private cameraThumb!: Phaser.GameObjects.Graphics;
+  private cards: UnitCard[] = [];
+  private productionTray!: ProductionTray;
 
   private wavePreview!: Phaser.GameObjects.Container;
   private wavePreviewIcons!: Phaser.GameObjects.Container;
@@ -111,6 +121,7 @@ export class UIScene extends Phaser.Scene {
 
   private pauseModal!: Phaser.GameObjects.Container;
   private pauseSoundButton!: Button;
+  private pauseMusicButton!: Button;
   private pauseVolumeButton!: Button;
   private pauseAutoNextButton!: Button;
   private pauseSoundLabel = '音效：开';
@@ -167,6 +178,22 @@ export class UIScene extends Phaser.Scene {
     this.refreshSelection();
   };
 
+  private readonly handleProduction = (production: ProductionSnapshot): void => {
+    this.production = production;
+    this.productionTray?.update(production);
+    this.refreshCards();
+  };
+
+  private readonly handleCamera = (camera: {
+    viewX: number;
+    worldWidth: number;
+    viewWidth: number;
+  }): void => {
+    this.cameraState = camera;
+    this.drawCameraBar();
+    this.tacticalMap?.update(camera.viewX);
+  };
+
   private readonly handleSkill = (skill: SkillStatus): void => {
     this.skill = skill;
     this.refreshSkill();
@@ -211,7 +238,7 @@ export class UIScene extends Phaser.Scene {
     this.hud = {
       integrity: START_INTEGRITY,
       maxIntegrity: START_INTEGRITY,
-      credits: START_CREDITS,
+      crystals: START_CRYSTALS,
       wave: 1,
       totalWaves: TOTAL_WAVES,
       endless: false,
@@ -225,11 +252,12 @@ export class UIScene extends Phaser.Scene {
       phase: 'prepare',
       paused: false,
       speed: 1,
-      buildTowerId: null,
+      deployTypeId: null,
       skillAiming: false,
-      selectedTowerId: null,
+      selectedUnitId: null,
     };
     this.selection = null;
+    this.production = { active: null, queue: [], ready: [] };
     this.skill = { ratio: 0, ready: true, aiming: false };
     this.bossState = null;
     this.result = null;
@@ -242,6 +270,7 @@ export class UIScene extends Phaser.Scene {
     this.autoNextState = { active: false, remaining: 0 };
 
     this.buildHud();
+    this.buildCameraBar();
     this.buildCommandBar();
     this.buildWavePreview();
     this.buildSelectionPanel();
@@ -265,6 +294,8 @@ export class UIScene extends Phaser.Scene {
     gameBus.on('game:hud', this.handleHud, this);
     gameBus.on('game:mode', this.handleMode, this);
     gameBus.on('game:selection', this.handleSelection, this);
+    gameBus.on('game:production', this.handleProduction, this);
+    gameBus.on('game:camera', this.handleCamera, this);
     gameBus.on('game:skill', this.handleSkill, this);
     gameBus.on('game:autoNext', this.handleAutoNext, this);
     gameBus.on('game:waveBanner', this.handleWaveBanner, this);
@@ -284,6 +315,7 @@ export class UIScene extends Phaser.Scene {
 
   private handleShutdown(): void {
     gameBus.offContext(this);
+    this.productionTray?.destroy();
     window.removeEventListener('keydown', this.domKeyHandler, { capture: true });
     window.removeEventListener('resize', this.handleViewportResize);
   }
@@ -312,8 +344,8 @@ export class UIScene extends Phaser.Scene {
     if (event.key === 'Escape') {
       if (this.mode.skillAiming) {
         gameBus.emit('ui:cancelSkillAim', {});
-      } else if (this.mode.buildTowerId) {
-        gameBus.emit('ui:cancelBuild', {});
+      } else if (this.mode.deployTypeId) {
+        gameBus.emit('ui:cancelDeploy', {});
       } else if (this.selection) {
         gameBus.emit('ui:selectTower', { towerId: null });
       } else if (this.mode.phase === 'prepare' || this.mode.phase === 'wave') {
@@ -328,6 +360,17 @@ export class UIScene extends Phaser.Scene {
       return;
     }
 
+    if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      gameBus.emit('ui:panCamera', { delta: -180 });
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
+      event.preventDefault();
+      gameBus.emit('ui:panCamera', { delta: 180 });
+      return;
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault();
       if (this.mode.phase === 'prepare') gameBus.emit('ui:startWave', {});
@@ -335,9 +378,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     if (['1', '2', '3', '4'].includes(event.key)) {
-      const towerIds: TowerId[] = ['pulse', 'mortar', 'cryo', 'arc'];
-      const towerId = towerIds[Number(event.key) - 1];
-      if (towerId) gameBus.emit('ui:selectBuild', { towerId });
+      const unitId = (['marine', 'goliath', 'tank', 'battlecruiser'] as UnitId[])[Number(event.key) - 1]!;
+      gameBus.emit('ui:requestUnit', { unitId });
       return;
     }
 
@@ -370,20 +412,20 @@ export class UIScene extends Phaser.Scene {
 
   private buildHud(): void {
     const bg = this.add.graphics();
-    bg.fillStyle(COLORS.void, 0.96);
-    bg.fillRect(0, 0, GAME_WIDTH, HUD_HEIGHT);
-    bg.fillStyle(COLORS.panel, 0.7);
-    bg.fillRect(0, 0, GAME_WIDTH, HUD_HEIGHT - 1);
-    bg.lineStyle(1, COLORS.lineBright, 0.7);
-    bg.beginPath();
-    bg.moveTo(0, HUD_HEIGHT - 0.5);
-    bg.lineTo(GAME_WIDTH, HUD_HEIGHT - 0.5);
-    bg.strokePath();
-    bg.lineStyle(2, COLORS.cyan, 0.55);
-    bg.beginPath();
-    bg.moveTo(0, HUD_HEIGHT - 1.5);
-    bg.lineTo(210, HUD_HEIGHT - 1.5);
-    bg.strokePath();
+    bg.fillStyle(0x10191f); bg.fillRect(0,0,GAME_WIDTH,HUD_HEIGHT);
+    bg.fillStyle(0x4c5b5f); bg.fillRect(0,0,GAME_WIDTH,4);
+    bg.fillStyle(0x89958c,0.6); bg.fillRect(0,0,GAME_WIDTH,1);
+    bg.fillStyle(0x2d3c41); bg.fillRect(0,HUD_HEIGHT-7,GAME_WIDTH,7);
+    bg.fillStyle(0x71817d); bg.fillRect(0,HUD_HEIGHT-7,GAME_WIDTH,1);
+    for(const [x,w] of [[10,144],[164,144],[318,176],[500,90],[600,102],[710,132]] as const) {
+      bg.fillStyle(0x070f14);bg.fillRoundedRect(x,9,w,46,3);
+      bg.lineStyle(1,0x566b6c,0.55);bg.strokeRoundedRect(x,9,w,46,3);
+      bg.fillStyle(0x22333b,0.7);bg.fillRect(x+2,11,w-4,2);
+    }
+    for(let x=858;x<980;x+=7) {bg.fillStyle(0x050c11);bg.fillRect(x,18,3,27);bg.fillStyle(0x405357);bg.fillRect(x+3,18,1,27);}
+    for(const x of [5,158,312,494,596,706,848,990,1238,1274]) {
+      for(const y of [6,58]) {bg.fillStyle(0x81918a);bg.fillCircle(x,y,2);bg.lineStyle(1,0x111e25);bg.lineBetween(x-1.5,y,x+1.5,y);}
+    }
 
     this.add.image(28, 32, 'icon-shield').setScale(0.72);
     this.integrityText = this.add.text(50, 20, `${START_INTEGRITY}`, {
@@ -398,14 +440,14 @@ export class UIScene extends Phaser.Scene {
       color: CSS_COLORS.muted,
     });
 
-    this.add.image(180, 32, 'icon-credit').setScale(0.72);
-    this.creditsText = this.add.text(202, 20, `${START_CREDITS}`, {
+    this.add.image(180, 32, 'icon-crystal').setScale(0.72);
+    this.creditsText = this.add.text(202, 20, `${START_CRYSTALS}`, {
       fontFamily: FONT_MONO,
       fontSize: '20px',
       color: CSS_COLORS.amber,
       fontStyle: 'bold',
     });
-    this.add.text(202, 43, '信用点', {
+    this.add.text(202, 43, '水晶', {
       fontFamily: FONT_FAMILY,
       fontSize: '10px',
       color: CSS_COLORS.muted,
@@ -494,70 +536,70 @@ export class UIScene extends Phaser.Scene {
     this.refreshSoundLabels();
   }
 
+  private buildCameraBar(): void {
+    this.cameraRail = this.add.graphics().setDepth(9);
+    this.cameraThumb = this.add.graphics().setDepth(10);
+    this.drawCameraBar();
+  }
+
+  private drawCameraBar(): void {
+    if (!this.cameraRail || !this.cameraThumb) return;
+    this.cameraRail.clear();
+    this.cameraThumb.clear();
+    const { viewX, worldWidth, viewWidth } = this.cameraState;
+    if (worldWidth <= viewWidth) return;
+    const x = 20;
+    const y = 67;
+    const width = GAME_WIDTH - 40;
+    const thumbWidth = Math.max(24, (viewWidth / worldWidth) * width);
+    const thumbX = x + (viewX / worldWidth) * width;
+    this.cameraRail.fillStyle(COLORS.panelLight, 0.72);
+    this.cameraRail.fillRoundedRect(x, y, width, 4, 2);
+    this.cameraRail.lineStyle(1, COLORS.lineBright, 0.55);
+    this.cameraRail.strokeRoundedRect(x, y, width, 4, 2);
+    this.cameraThumb.fillStyle(COLORS.cyan, 0.7);
+    this.cameraThumb.fillRoundedRect(thumbX, y, thumbWidth, 4, 2);
+  }
+
   private buildCommandBar(): void {
     const bg = this.add.graphics();
-    bg.fillStyle(COLORS.void, 0.97);
-    bg.fillRect(0, BUILD_BAR_Y, GAME_WIDTH, GAME_HEIGHT - BUILD_BAR_Y);
-    bg.lineStyle(1, COLORS.lineBright, 0.75);
-    bg.beginPath();
-    bg.moveTo(0, BUILD_BAR_Y + 0.5);
-    bg.lineTo(GAME_WIDTH, BUILD_BAR_Y + 0.5);
-    bg.strokePath();
-    bg.lineStyle(1, COLORS.cyan, 0.15);
-    bg.beginPath();
-    bg.moveTo(0, BUILD_BAR_Y + 4);
-    bg.lineTo(GAME_WIDTH, BUILD_BAR_Y + 4);
-    bg.strokePath();
-
-    const cardWidth = 140;
-    const cardHeight = 72;
-    this.cards = (['pulse', 'mortar', 'cryo', 'arc'] as TowerId[]).map((towerId, index) => {
-      const card = new TowerCard(
-        this,
-        TOWER_MAP[towerId],
-        16 + index * 148,
-        636,
-        cardWidth,
-        cardHeight,
-        (selectedId) => gameBus.emit('ui:selectBuild', { towerId: selectedId }),
-      );
-      card.container.setDepth(10);
-      return card;
+    bg.fillStyle(0x070e15, 1); bg.fillRect(0, BUILD_BAR_Y, GAME_WIDTH, 150);
+    bg.fillStyle(0x263641, 1); bg.fillRect(0, BUILD_BAR_Y, GAME_WIDTH, 4);
+    bg.fillStyle(0x819397, 0.5); bg.fillRect(0, BUILD_BAR_Y, GAME_WIDTH, 1);
+    bg.fillStyle(0x14212c, 1); bg.fillRect(0, BUILD_BAR_Y + 4, GAME_WIDTH, 18);
+    for (const x of [8, 176, 632, 840, 1100, 1270]) {
+      bg.fillStyle(0x354651, 1); bg.fillRect(x, BUILD_BAR_Y + 6, 2, 140);
+      for (const y of [BUILD_BAR_Y + 11, 712]) { bg.fillStyle(0x6d7e83); bg.fillCircle(x + 1, y, 2); }
+    }
+    this.add.text(20, 577, 'NEXUS–7   /   指挥控制', { fontFamily: FONT_MONO, fontSize: '9px', color: '#92afb7' });
+    this.add.text(194, 577, 'UNIT FABRICATION   /   作战单位', { fontFamily: FONT_MONO, fontSize: '9px', color: '#92afb7' });
+    this.add.text(853, 577, 'TACTICAL COMMAND', { fontFamily: FONT_MONO, fontSize: '9px', color: '#92afb7' });
+    this.tacticalMap = new TacticalMap(this);
+    this.cards = (['marine', 'goliath', 'tank', 'battlecruiser'] as UnitId[]).map((unitId, index) => {
+      const card = new UnitCard(this, UNIT_MAP[unitId], 184 + index * 112, 598, 104, 108,
+        (requestedId) => gameBus.emit('ui:requestUnit', { unitId: requestedId }));
+      card.container.setDepth(10); return card;
     });
-
-    this.skillButton = new Button(this, {
-      x: 616,
-      y: 636,
-      width: 126,
-      height: 72,
-      label: '轨道轰炸',
-      subLabel: 'Q · 准备就绪',
-      fontSize: 15,
-      subFontSize: 10,
-      accent: COLORS.amber,
-      onClick: () => gameBus.emit('ui:toggleSkillAim', {}),
+    this.productionTray = new ProductionTray(this, 640, 594, {
+      isDeployAllowed: () => !this.mode.paused && this.mode.phase !== 'victory' && this.mode.phase !== 'defeat',
+      onDrag: (unitId, pointerX, pointerY) => gameBus.emit('ui:deployDrag', { active: true, unitId, pointerX, pointerY }),
+      onDrop: (unitId, pointerX, pointerY) => gameBus.emit('ui:deployAt', { unitId, pointerX, pointerY }),
+      onBeginDeploy: (unitId) => gameBus.emit('ui:beginDeploy', { unitId }),
     });
+    this.productionTray.update(this.production);
+    this.skillButton = new Button(this, { x: 1108, y: 594, width: 156, height: 48,
+      label: '轨道轰炸', subLabel: 'Q · 准备就绪', fontSize: 14, subFontSize: 10,
+      accent: COLORS.amber, onClick: () => gameBus.emit('ui:toggleSkillAim', {}) });
     this.skillButton.container.setDepth(10);
-
     this.skillCooldownBar = this.add.graphics().setDepth(11);
-
-    this.startWaveButton = new Button(this, {
-      x: 754,
-      y: 636,
-      width: 170,
-      height: 72,
-      label: '开始第 1 波',
-      subLabel: 'ENTER',
-      fontSize: 15,
-      subFontSize: 10,
-      accent: COLORS.cyan,
-      onClick: () => gameBus.emit('ui:startWave', {}),
-    });
+    this.startWaveButton = new Button(this, { x: 1108, y: 650, width: 156, height: 56,
+      label: '开始第 1 波', subLabel: 'ENTER', fontSize: 14, subFontSize: 10,
+      accent: COLORS.cyan, onClick: () => gameBus.emit('ui:startWave', {}) });
     this.startWaveButton.container.setDepth(10);
   }
 
   private buildWavePreview(): void {
-    this.wavePreview = this.add.container(640, 596).setVisible(false);
+    this.wavePreview = this.add.container(640, HUD_HEIGHT + 25).setVisible(false);
     const bg = this.add.graphics();
     bg.fillStyle(COLORS.panel, 0.92);
     bg.fillRoundedRect(-300, -18, 600, 36, 8);
@@ -607,8 +649,8 @@ export class UIScene extends Phaser.Scene {
       this.wavePreviewIcons.removeAll(true);
       let x = 0;
       for (const group of wave.groups) {
-        const icon = this.add.image(x, 0, `enemy-${group.enemyId}`);
-        const scale = group.enemyId === 'boss' ? 0.18 : 0.3;
+        const icon = this.add.image(x, 0, enemyTextureKey(this, group.enemyId));
+        const scale = enemyPreviewScale(this, group.enemyId);
         icon.setScale(scale);
         this.wavePreviewIcons.add(icon);
         const count = this.add.text(x + (group.enemyId === 'boss' ? 30 : 24), 0, `×${group.count}`, {
@@ -628,19 +670,19 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildSelectionPanel(): void {
-    this.selectionPanel = this.add.container(940, 632);
+    this.selectionPanel = this.add.container(848, 594);
     this.selectionPanel.setDepth(10);
 
     const bg = this.add.graphics();
     bg.fillStyle(COLORS.panelLight, 0.96);
-    bg.fillRoundedRect(0, 0, 324, 80, 8);
+    bg.fillRoundedRect(0, 0, 244, 112, 8);
     bg.lineStyle(1, COLORS.lineBright, 0.75);
-    bg.strokeRoundedRect(0.5, 0.5, 323, 79, 8);
+    bg.strokeRoundedRect(0.5, 0.5, 243, 111, 8);
     this.selectionPanel.add(bg);
 
-    this.selectionHint = this.add.text(162, 40, '点击已建塔查看升级 / 卖出', {
+    this.selectionHint = this.add.text(122, 52, '单位遥测 / UNIT STATUS\n\n选择战场单位查看状态\nU 升级 · S 撤离', {
       fontFamily: FONT_FAMILY,
-      fontSize: '12px',
+      fontSize: '11px',
       color: CSS_COLORS.muted,
       align: 'center',
     });
@@ -650,7 +692,7 @@ export class UIScene extends Phaser.Scene {
     this.selectionDetails = this.add.container(0, 0);
     this.selectionPanel.add(this.selectionDetails);
 
-    this.selectionName = this.add.text(10, 7, '防御塔', {
+    this.selectionName = this.add.text(10, 7, '作战单位', {
       fontFamily: FONT_FAMILY,
       fontSize: '14px',
       color: CSS_COLORS.text,
@@ -658,14 +700,14 @@ export class UIScene extends Phaser.Scene {
     });
     this.selectionDetails.add(this.selectionName);
 
-    this.selectionStats = this.add.text(10, 27, '', {
+    this.selectionStats = this.add.text(10, 32, '', {
       fontFamily: FONT_MONO,
       fontSize: '10px',
       color: CSS_COLORS.muted,
     });
     this.selectionDetails.add(this.selectionStats);
 
-    this.selectionAbility = this.add.text(10, 46, '', {
+    this.selectionAbility = this.add.text(10, 51, '', {
       fontFamily: FONT_FAMILY,
       fontSize: '10px',
       color: CSS_COLORS.cyanDim,
@@ -673,10 +715,10 @@ export class UIScene extends Phaser.Scene {
     this.selectionDetails.add(this.selectionAbility);
 
     this.upgradeButton = new Button(this, {
-      x: 174,
-      y: 7,
-      width: 70,
-      height: 26,
+      x: 8,
+      y: 77,
+      width: 72,
+      height: 28,
       label: '升级',
       fontSize: 11,
       accent: COLORS.cyan,
@@ -685,11 +727,11 @@ export class UIScene extends Phaser.Scene {
     this.selectionDetails.add(this.upgradeButton.container);
 
     this.sellButton = new Button(this, {
-      x: 248,
-      y: 7,
-      width: 70,
-      height: 26,
-      label: '卖出',
+      x: 84,
+      y: 77,
+      width: 72,
+      height: 28,
+      label: '撤离',
       fontSize: 11,
       accent: COLORS.amber,
       onClick: () => gameBus.emit('ui:sellTower', {}),
@@ -697,10 +739,10 @@ export class UIScene extends Phaser.Scene {
     this.selectionDetails.add(this.sellButton.container);
 
     this.targetButton = new Button(this, {
-      x: 174,
-      y: 40,
-      width: 144,
-      height: 26,
+      x: 160,
+      y: 77,
+      width: 76,
+      height: 28,
       label: '目标：最前',
       fontSize: 10,
       accent: COLORS.magenta,
@@ -726,7 +768,7 @@ export class UIScene extends Phaser.Scene {
     bg.strokeRoundedRect(-300, -16, 600, 44, 6);
     this.bossBar.add(bg);
 
-    this.bossName = this.add.text(-286, -10, '虚空母舰', {
+    this.bossName = this.add.text(-286, -10, '雷兽', {
       fontFamily: FONT_FAMILY,
       fontSize: '13px',
       color: CSS_COLORS.text,
@@ -771,7 +813,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildToast(): void {
-    this.toastText = this.add.text(640, 556, '', {
+    this.toastText = this.add.text(640, BUILD_BAR_Y - 70, '', {
       fontFamily: FONT_FAMILY,
       fontSize: '14px',
       color: CSS_COLORS.text,
@@ -857,7 +899,7 @@ export class UIScene extends Phaser.Scene {
     this.pauseSoundButton = new Button(this, {
       x: 490,
       y: 398,
-      width: 300,
+      width: 146,
       height: 42,
       label: this.pauseSoundLabel,
       fontSize: 15,
@@ -865,6 +907,11 @@ export class UIScene extends Phaser.Scene {
       onClick: () => this.toggleSound(),
     });
     this.pauseModal.add(this.pauseSoundButton.container);
+    this.pauseMusicButton = new Button(this, { x: 644, y: 398, width: 146, height: 42,
+      label: audio.getMusicLabel(), fontSize: 12, accent: COLORS.green,
+      onClick: () => { audio.toggleMusic(); this.pauseMusicButton.setLabel(audio.getMusicLabel()); } });
+    this.pauseModal.add(this.pauseMusicButton.container);
+
 
     this.pauseVolumeButton = new Button(this, {
       x: 490,
@@ -1011,16 +1058,14 @@ export class UIScene extends Phaser.Scene {
   private refreshHud(): void {
     this.integrityText.setText(`${this.hud.integrity}`);
     this.integrityText.setColor(this.hud.integrity <= 6 ? CSS_COLORS.red : CSS_COLORS.text);
-    this.creditsText.setText(`${this.hud.credits}`);
+    this.creditsText.setText(`${this.hud.crystals}`);
     this.waveText.setText(
       this.hud.endless ? `${this.hud.wave} / ∞` : `${this.hud.wave} / ${this.hud.totalWaves}`,
     );
     this.killsText.setText(`${this.hud.kills}`);
     this.enemiesText.setText(`${this.hud.enemiesRemaining}`);
     this.speedButton.setLabel(`${this.hud.speed}x`);
-    this.cards.forEach((card) => {
-      card.setAffordable(this.hud.credits >= card.tower.cost);
-    });
+    this.refreshCards();
 
     const modePrefix = this.hud.endless ? '无尽 · ' : '';
     if (this.mode.phase === 'prepare') {
@@ -1048,7 +1093,6 @@ export class UIScene extends Phaser.Scene {
     this.speedButton.setEnabled(this.mode.phase !== 'victory' && this.mode.phase !== 'defeat');
     this.pauseButton.setEnabled(this.mode.phase === 'prepare' || this.mode.phase === 'wave');
     this.cards.forEach((card) => {
-      card.setSelected(this.mode.buildTowerId === card.tower.id);
       card.setEnabled(this.mode.phase !== 'victory' && this.mode.phase !== 'defeat' && !this.mode.paused);
     });
     this.skillButton.setActive(this.mode.skillAiming);
@@ -1060,6 +1104,15 @@ export class UIScene extends Phaser.Scene {
     this.refreshHud();
   }
 
+  private refreshCards(): void {
+    if (!this.cards.length) return;
+    for (const card of this.cards) {
+      card.setAffordable(this.hud.crystals >= card.unit.cost);
+      const canRequest = !this.mode.paused && this.mode.phase !== 'victory' && this.mode.phase !== 'defeat';
+      card.setEnabled(canRequest);
+    }
+  }
+
   private refreshSelection(): void {
     const hasSelection = this.selection !== null;
     this.selectionHint.setVisible(!hasSelection);
@@ -1067,33 +1120,31 @@ export class UIScene extends Phaser.Scene {
     this.selectionDetailsVisible = hasSelection;
     if (!this.selection) return;
 
-    const config = TOWER_MAP[this.selection.typeId];
-    const stats = getTowerStats(this.selection.typeId, this.selection.level);
+    const config = UNIT_MAP[this.selection.typeId];
+    const stats = getUnitStats(this.selection.typeId, this.selection.level);
     this.selectionName.setText(`${config.name}  Lv.${this.selection.level}`);
     this.selectionStats.setText(
       `伤害 ${Math.round(stats.damage)}   射程 ${Math.round(stats.range)}   间隔 ${stats.cooldown.toFixed(2)}s`,
     );
     const ability =
-      this.selection.typeId === 'cryo'
-        ? `减速 ${Math.round((stats.slowFactor ?? 0) * 100)}% / ${stats.slowDuration ?? 0}s`
-        : this.selection.typeId === 'arc'
-          ? `连锁 ${stats.chainCount ?? 0} 目标 · 每跳 ×${stats.chainFalloff ?? 0.65}`
-          : this.selection.typeId === 'mortar'
-            ? `范围 ${stats.splashRadius ?? 0}px`
-            : '单体追踪 · 稳定输出';
+      this.selection.typeId === 'goliath'
+        ? '双管自动炮 · 装甲压制'
+        : this.selection.typeId === 'tank'
+          ? `远程炮击 · 范围 ${stats.splashRadius ?? 0}px`
+          : this.selection.typeId === 'battlecruiser' ? '舰载激光炮 · 空中火力' : '步枪曳光 · 单体点射';
     this.selectionAbility.setText(ability);
 
     const upgradeCost = this.selection.upgradeCost;
     const canUpgrade =
       upgradeCost !== null &&
-      this.hud.credits >= upgradeCost &&
+      this.hud.crystals >= upgradeCost &&
       !this.mode.paused &&
       this.mode.phase !== 'victory' &&
       this.mode.phase !== 'defeat';
     this.upgradeButton.setEnabled(canUpgrade);
     this.upgradeButton.setLabel(upgradeCost === null ? '已满级' : `升级 ${upgradeCost}`);
     this.sellButton.setEnabled(!this.mode.paused && this.mode.phase !== 'victory' && this.mode.phase !== 'defeat');
-    this.sellButton.setLabel(`卖出 ${this.selection.sellValue}`);
+    this.sellButton.setLabel(`撤离 ${this.selection.sellValue}`);
     this.targetButton.setEnabled(!this.mode.paused && this.mode.phase !== 'victory' && this.mode.phase !== 'defeat');
     this.targetButton.setLabel(`目标：${TARGET_LABELS[this.selection.targetMode]}`);
   }
@@ -1122,12 +1173,12 @@ export class UIScene extends Phaser.Scene {
     if (!this.skillCooldownBar) return;
     this.skillCooldownBar.clear();
     this.skillCooldownBar.fillStyle(COLORS.void, 0.9);
-    this.skillCooldownBar.fillRect(616, 708, 126, 3);
+    this.skillCooldownBar.fillRect(1114, 639, 144, 2);
     const ready = this.skill.ready || this.skill.aiming;
     const ratio = ready ? 1 : 1 - this.skill.ratio;
     if (ratio > 0) {
       this.skillCooldownBar.fillStyle(ready ? COLORS.amber : COLORS.cyanDim, 0.95);
-      this.skillCooldownBar.fillRect(616, 708, 126 * Math.max(0, Math.min(1, ratio)), 3);
+      this.skillCooldownBar.fillRect(1114, 639, 144 * Math.max(0, Math.min(1, ratio)), 3);
     }
   }
 
@@ -1163,7 +1214,7 @@ export class UIScene extends Phaser.Scene {
     const stats = this.pauseModal.getByName('pauseStats') as Phaser.GameObjects.Text | null;
     if (stats) {
       stats.setText(
-        `完整度 ${this.hud.integrity}/${this.hud.maxIntegrity}   信用点 ${this.hud.credits}   波次 ${this.hud.wave}/${this.hud.endless ? '∞' : this.hud.totalWaves}`,
+        `完整度 ${this.hud.integrity}/${this.hud.maxIntegrity}   水晶 ${this.hud.crystals}   波次 ${this.hud.wave}/${this.hud.endless ? '∞' : this.hud.totalWaves}`,
       );
     }
   }
@@ -1264,11 +1315,11 @@ export class UIScene extends Phaser.Scene {
         ? 'NEXUS-7 跃迁核心保持完整，虫群已被击退。'
         : result.endless
           ? `你守到了第 ${result.waveReached} 波。无尽虫潮仍在继续。`
-          : '星港防线被突破。调整构筑，再来一次。',
+          : '星际塔防被突破。调整构筑，再来一次。',
     );
     this.resultScore.setText(`评分  ${result.score.toLocaleString('zh-CN')}`);
     this.resultStats.setText(
-      `到达波次   ${result.waveReached} / ${result.endless ? '∞' : TOTAL_WAVES}\n击杀数量   ${result.kills}\n剩余完整度 ${result.integrity}\n剩余信用点 ${result.credits}`,
+      `到达波次   ${result.waveReached} / ${result.endless ? '∞' : TOTAL_WAVES}\n击杀数量   ${result.kills}\n剩余完整度 ${result.integrity}\n剩余水晶   ${result.crystals}`,
     );
     this.resultBest.setText(
       result.isNewBest

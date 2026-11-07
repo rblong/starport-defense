@@ -4,7 +4,7 @@ import { COLORS } from '../game/constants';
 export const ENEMIES: EnemyConfig[] = [
   {
     id: 'scout',
-    name: '侦察虫',
+    name: '跳虫',
     maxHp: 60,
     speed: 55,
     armor: 0,
@@ -17,7 +17,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'runner',
-    name: '疾行虫',
+    name: '迅捷跳虫',
     maxHp: 45,
     speed: 95,
     armor: 0,
@@ -30,7 +30,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'brute',
-    name: '装甲虫',
+    name: '刺蛇',
     maxHp: 320,
     speed: 35,
     armor: 6,
@@ -43,7 +43,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'splitter',
-    name: '分裂虫',
+    name: '潜伏者',
     maxHp: 140,
     speed: 50,
     armor: 2,
@@ -57,7 +57,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'shard',
-    name: '碎片',
+    name: '分裂幼虫',
     maxHp: 30,
     speed: 75,
     armor: 0,
@@ -70,7 +70,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'elite',
-    name: '装甲虫·精英',
+    name: '精英刺蛇',
     maxHp: 1280,
     speed: 30,
     armor: 8,
@@ -84,7 +84,7 @@ export const ENEMIES: EnemyConfig[] = [
   },
   {
     id: 'boss',
-    name: '虚空母舰',
+    name: '雷兽',
     maxHp: 3500,
     speed: 28,
     armor: 10,

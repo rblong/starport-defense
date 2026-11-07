@@ -1,0 +1,74 @@
+{
+  "snapshot": {
+    "cards": [
+      "marine",
+      "goliath",
+      "tank",
+      "battlecruiser"
+    ],
+    "canvas": [
+      2560,
+      1440
+    ],
+    "pathLength": 3060,
+    "pads": 32
+  },
+  "steps": [
+    {
+      "name": "Terran menu and game rename",
+      "title": "星际塔防 · Interstellar Defense"
+    },
+    {
+      "name": "Original background music initialized after pointer gesture",
+      "label": "背景音乐：开",
+      "loop": true,
+      "volume": 0.14,
+      "playing": true
+    },
+    {
+      "name": "Music responds to zero volume, mute, and persisted switch",
+      "zero": true,
+      "muted": true,
+      "disabled": true
+    },
+    "Marine: real production, invalid drop, drag deployment",
+    {
+      "name": "Four manufactured units and proportions",
+      "units": [
+        {
+          "id": "marine",
+          "scale": 0.36363636363636365,
+          "width": 34.90909090909091
+        },
+        {
+          "id": "goliath",
+          "scale": 0.5227272727272727,
+          "width": 50.18181818181818
+        },
+        {
+          "id": "tank",
+          "scale": 0.6590909090909091,
+          "width": 63.272727272727266
+        },
+        {
+          "id": "battlecruiser",
+          "scale": 1,
+          "width": 96
+        }
+      ]
+    },
+    "Upgrade works and preserves scale",
+    "Walking changes frames with movement and freezes on pause",
+    {
+      "name": "Minimap pan",
+      "viewX": 1280
+    },
+    {
+      "name": "No local asset pack: four cards, deployment, enemy movement",
+      "local": false,
+      "fallback": true,
+      "cards": 4
+    }
+  ],
+  "errors": []
+}

@@ -21,6 +21,8 @@ export interface EnemyRuntime {
   speed: number;
   slowFactor: number;
   slowUntil: number;
+  burnDps: number;
+  burnUntil: number;
   alive: boolean;
   deathQueued: boolean;
   leaked: boolean;

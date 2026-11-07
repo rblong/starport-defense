@@ -1,208 +1,234 @@
-# 星港防线 · 实施与验收报告
+# 实施与验收报告
 
-| 项目 | 内容 |
+> 当前版本：**v2.0.0（人族作战单位玩法）**
+> 需求来源：[人族作战单位玩法需求（v2）](04-unit-gameplay-redesign.md)
+
+## 1. 本次改造摘要
+
+将原“建造四类防御塔”玩法改造为：
+
+- 基础货币改为**水晶**。
+- 点击制造卡申请制造作战单位，水晶立即扣除并进入生产队列。
+- 制造完成后单位进入待部署区，可拖放到部署点，也可点击单位再点击部署点。
+- 已部署单位可选中、升级、撤离，并播放兵种专属中文语音。
+- 初始三个兵种：**机枪兵**（单体点射）、**喷火兵**（扇形火焰 + 灼烧）与**攻城坦克**（远程范围炮击）。
+- 已确认：**第一版单位不会被敌人攻击，也没有单位生命值/维修机制**。
+- 地图扩展为 **2560×720 世界宽度（2 倍视口）**、36×8 网格、32 个部署点；相机支持左右拖动与 A/D、方向键平移，顶部显示视角条。
+- 可选接入 **星际争霸本地素材包**：机枪兵/攻城坦克像素帧、红色爆炸序列、按钮/攻击/选中/升级/击杀/胜负音效；素材不提交、不随公开仓库分发，缺包自动 fallback。
+
+保留：12 波标准战役、Boss、无尽模式、1x–5x 速度、自动下一波、下一波预览、轨道轰炸、暂停/帮助/结算、2x 内部渲染、背景铺满、本地存档。
+
+## 2. 已实现内容
+
+### 2.0 横向地图与相机平移
+
+- 世界宽度 2560，逻辑视口 1280×720，地图 36×8 格、32 个部署点。
+- 路径从世界左侧入口折返至最右侧指挥中心；背景/星云/暗角覆盖全宽。
+- 在战场按住左键左右拖动即可平移；未超过 6px 阈值时仍按点击处理。
+- `A`/`D` 与 `←`/`→` 可平移 180px/次；相机 viewX 限制在 0..1280，无黑边。
+- 顶部 HUD 下方显示当前视口在世界中的位置条。
+- 待部署单位拖到战场时，UIScene 只上传画布指针坐标，GameScene 用当前平移相机换算世界坐标，已验证平移后部署与选中不会偏移。
+- 暂停/结算时禁止平移；点选单位与拖动地图互不误触。
+
+### 2.1 经济与制造
+
+- `START_CRYSTALS = 220`，HUD 改为“水晶”并使用水晶图标。
+- 击杀敌人和清波奖励仍进入同一经济池，评分公式使用剩余水晶。
+- 制造卡：机枪兵 60 水晶 / 2.0s，喷火兵 120 水晶 / 3.5s，攻城坦克 180 水晶 / 5.0s。
+- 单生产线、队列上限 3、待部署上限 3；生产/队列/待部署状态由 GameScene 持有并通过 `game:production` 快照同步 UI。
+- 制造、队列、完成、等待部署区空位均有 UI 提示或状态表现。
+
+### 2.2 部署
+
+- `ProductionTray` 管理生产进度、队列数量和待部署槽位。
+- 拖动待部署单位时显示拖拽影像，GameScene 高亮合法部署点并显示范围预览。
+- 支持点击待部署单位 → 点击部署点。
+- 非法位置（非部署点、已占用）被拒绝；部署成功后才从待部署区移除。
+- 部署消耗在制造时已支付，部署本身不扣水晶。
+
+### 2.3 兵种与战斗
+
+- 机枪兵：单发追踪弹，Lv1 伤害 12 / 间隔 0.45s / 射程 160。
+- 喷火兵：正面扇形火焰，Lv1 伤害 38 / 间隔 1.7s / 射程 120 / 100° / 灼烧 8×3s。
+- 三个兵种均支持 Lv2、Lv3 升级；升级扣水晶并播放升级语音。
+- 攻城坦克：远程炮击，Lv1 伤害 55 / 间隔 2.8s / 射程 260 / 溅射 70；炮弹按飞行时间落到目标位置，命中范围内全部敌人。
+- 撤离返还“总投入水晶”的 60%，播放撤离语音。
+- 旧炮塔的减速、连锁、迫击炮溅射机制不再使用；新增火焰扇形、灼烧与坦克落点范围伤害。
+
+### 2.4 语音
+
+- 12 段原创中文无线电语音：3 兵种 × 选中 / 部署 / 升级 / 撤离。
+- 使用本机 TTS 生成 WAV 后放入 `public/audio/voice/`，运行期不依赖在线服务。
+- 选中语音与部署/升级/撤离语音均受静音与音量控制；同一条语音 1.5s 内不重复。
+- 浏览器验证中已确认 WAV 请求被触发，控制台无错误。
+
+### 2.5 可选星际素材本地包
+
+- `scripts/stage-starcraft-pack.py` 从 Codex 整理的 `artifacts/starcraft1/` 生成本地包到 `public/assets/sc-local/`。
+- 资源内容：
+  - `sc-marine` / `sc-tank`：从原图集裁切的像素单位帧；
+  - `sc-explosion`：9 帧红色爆炸 spritesheet；
+  - 12 个 WAV：Button、Marine.selected/attack、Tank.selected/attack2、upgrade、Zergling/Hydralisk/Ultralisk death、TerranBuilding death、YouWin/YouLose。
+- BootScene 异步检测本地 manifest；存在时注册纹理/动画并启用 SC 音频，缺失时静默回退。
+- 机枪兵/坦克显示 SC 帧；卡片、待部署托盘同步换纹理；选中播放对应 SC selected 音效。
+- 攻击、升级、击杀、胜利/失败使用对应音效；喷火兵无对应素材，保留合成音效/TTS。
+- 爆炸使用 `sc-explode` 动画；动画完成自动销毁，实测可同时存在多个实例。
+- `.gitignore` 排除 `public/assets/sc-local/` 和 `artifacts/starcraft1/`；公开仓库不包含版权素材。
+
+### 2.6 UI / 文案
+
+- 底部：三张制造卡 + 生产/待部署托盘 + 轨道轰炸 + 开始下一波 + 单位面板。
+- 面板文案改为：制造终端、待部署、升级、撤离、水晶、部署点、指挥中心。
+- 菜单帮助更新为制造/部署/兵种/升级/语音/水晶说明。
+- 单位选中面板显示伤害、射程、间隔、扇形角度与灼烧。
+
+### 2.7 虫族敌人
+
+- 本地素材包存在时，敌人使用 Codex 素材中的 Zerg 像素帧：Zergling、Hydralisk、Lurker、Ultralisk。
+- 映射：scout/runner/shard → 跳虫，brute/elite → 刺蛇，splitter → 潜伏者，boss → 雷兽。
+- 下一波预览图标、Boss 血条与击杀提示使用虫族名称；战斗数值、路径、分裂、狂暴规则不变。
+- 无素材包时仍使用程序化虫群纹理；名称保持当前虫族名称。
+- 虫族死亡音效沿用 `docs/07` 的 Zergling / Hydralisk / Ultralisk death 映射。
+
+## 3. 自动化验证
+
+| 项目 | 结果 |
 | --- | --- |
-| 版本 | v1.0 |
-| 日期 | 2026-11-06 |
-| 状态 | P0 完成，可游玩 |
-| 关联文档 | [需求规格](01-requirements.md) · [技术方案](02-technical-design.md) |
+| `npm run typecheck` | 通过 |
+| `npm test` | 7 个测试文件、**33** 个测试通过 |
+| `npm run build` | 通过 |
+| 测试覆盖 | 波次、敌人、单位配置、路径、索敌、护甲、评分、经济、存档、无尽波次 |
 
----
+新增/更新的单元测试：
 
-## 1. 交付摘要
+- 单位配置为 3 个兵种、各 3 级、制造时间与语音字段存在。
+- 单位升级伤害递增、升级费用递增。
+- 撤离返还 60%。
+- 评分公式改用“水晶”。
 
-《星港防线》已按需求文档的 P0 范围完成实现，并在真实浏览器中验证了完整游戏循环：
+## 4. 真实浏览器验收
 
-- 1 张地图、12 波标准战役 + 无尽模式、4 座防御塔、5 类敌人 + 精英 + Boss；
-- 建塔、3 级升级、卖出、目标优先级切换；
-- 轨道轰炸主动技能；
-- 暂停/继续、1x–5x 速度、音效、音量、减少动态效果、自动下一波；
-- 下一波敌人构成预览与清波奖励提示；
-- 胜利/失败结算、重开、返回主菜单；
-- 最佳成绩、最高波次与设置持久化；
-- 程序化视觉、弹道/粒子/震屏反馈、Boss 血条与波次横幅；
-- 竖屏/切后台自动暂停；
-- 背景满屏：非 16:9 窗口下星空背景铺满两侧/上下，游戏保持比例不拉伸；
-- 高分辨率渲染：2560×1440 内部画布 + 2x 文本纹理，改善 1080p/高 DPI 下的界面模糊。
+Headless Chrome + CDP，1280×720、DPR 1、实际鼠标事件：
 
-**技术栈实际版本**：Phaser `4.2.1`、TypeScript `5.9.3`、Vite `8.3.6`、Vitest `5.1.0`、Node.js `22.20.0`。
-
----
-
-## 2. 运行方式
-
-```bash
-npm install
-npm run dev       # 开发服务器
-npm run typecheck # TypeScript strict
-npm test          # Vitest
-npm run build     # 生产构建
-npm run preview   # 预览 dist
-```
-
-构建产物位于 `dist/`；游戏运行期不加载第三方资源，不需要后端。
-
----
-
-## 3. 验证结果
-
-### 3.1 自动化检查
-
-| 检查 | 结果 |
+| 验收项 | 结果 |
 | --- | --- |
-| `npm run typecheck` | 通过（0 错误） |
-| `npm test` | 7 个测试文件、**33** 个测试全部通过 |
-| `npm run build` | 通过，输出 `dist/assets/index-*.js`（约 1.46 MB / gzip 383 KB） |
-| 浏览器控制台 | 无未处理错误 |
-| 运行期网络 | 无第三方请求、无 4xx/5xx（`final-verification.json` 中 `networkIssues: []`） |
-| 生产构建浏览器冒烟 | 通过：`dist` 经 `vite preview` 在 Chrome 中加载，Canvas 1280×720、无黑屏、无错误、无失败请求（`prod-smoke.json`） |
+| 主菜单进入标准模式 | 通过 |
+| 底部三个制造卡（机枪兵 / 喷火兵 / 攻城坦克） | 通过 |
+| 申请制造机枪兵：220 → 160 水晶，进入生产 | 通过 |
+| 2 秒后机枪兵进入待部署区 | 通过 |
+| 拖动到部署点完成部署 | 通过 |
+| 点击待部署单位 → 点击部署点完成部署 | 通过 |
+| 选中机枪兵/喷火兵/攻城坦克触发对应 WAV 语音请求 | 通过 |
+| 喷火兵升级：Lv1 → Lv2，扣 100 水晶 | 通过 |
+| 喷火兵撤离：返还 132 水晶（总投入 220 的 60%） | 通过 |
+| 喷火兵扇形命中 5 个目标并施加灼烧 | 通过 |
+| 攻城坦克制造：220 → 40 水晶，5 秒后进入待部署 | 通过 |
+| 攻城坦克远程范围炮击：6 个目标同时受击 | 通过 |
+| 地图世界宽度 2560、视口 1280、36×8 格、32 个部署点 | 通过 |
+| 战场左拖：viewX 0 → 500，HUD 视角条更新 | 通过 |
+| D/A 键平移：500 → 680 → 500 | 通过 |
+| 左拖到最右侧：viewX clamp 到 1280 | 通过 |
+| 平移后从待部署区拖到部署点 | 通过（单位正确落在世界坐标 pad） |
+| 平移后点击已部署单位 | 通过（选中机枪兵） |
+| 本地星际包纹理/动画注册 | 通过（sc-marine / sc-tank / sc-explosion / sc-explode） |
+| 卡片与部署单位使用 SC 纹理 | 通过 |
+| SC selected / attack / death / Button 音效请求 | 通过 |
+| SC 爆炸动画多个实例同时播放 | 通过（5 个 sprite 均 playing） |
+| 素材包缺失 fallback | 通过（菜单启动、程序化纹理、无运行时错误） |
+| 虫族敌人纹理/下一波预览/Boss 血条 | 通过（跳虫 → Zergling、雷兽 → Ultralisk） |
+| 虫族敌人无素材包 fallback | 通过（程序化 enemy-scout，无运行时错误） |
+| 开始第 1 波，多兵种自动攻击、击杀敌人 | 通过 |
+| 控制台异常 / 页面错误 | 0 |
 
-单元测试覆盖：
+验收数据：
 
-- 护甲、连锁衰减、Boss 减速抗性、减速取强与刷新；
-- 三种索敌优先级与稳定 tie-break；
-- 路径分段、采样、转角、越界钳制；
-- 评分公式、卖出返还、清波奖励；
-- 12 波配置、4 塔 3 级、16 个建造位与路径不重叠、波次展开顺序；
-- 无 `localStorage` 环境下的存档降级、最佳成绩累计。
+- `artifacts/unit-gameplay-verification.json`
+- `artifacts/unit-upgrade-verification.json`
+- `artifacts/firebat-verification.json`
+- `artifacts/tank-verification.json`
+- `artifacts/map-pan-verification.json`
+- `artifacts/map-runtime-verification.json`
+- `artifacts/starcraft-pack-verification.json`
+- `artifacts/starcraft-pack-final-verification.json`
+- `artifacts/sc-pack-fallback-verification.json`
+- `artifacts/zerg-enemy-verification.json`
+- `artifacts/zerg-fallback-verification.json`
 
-### 3.2 浏览器交互验证
-
-使用 Chrome 156（Headless，1280×720，硬件 WebGL：Intel Arc Pro 140T / ANGLE D3D11）执行真实点击和键盘操作：
-
-| 场景 | 结果 |
-| --- | --- |
-| 主菜单 / 帮助面板打开与关闭 | 通过（`p1-final-verification.json`） |
-| 点击开始进入游戏 | 通过 |
-| 下一波预览显示、开波后隐藏 | 通过（`p1-final-verification.json`、`42-final-wave-preview.png`） |
-| 菜单与暂停面板音量调节、持久化 | 通过（25% 档写入 localStorage，`p1-verification.json`） |
-| 3 座脉冲塔通关第 1 波 | 通过（8 击杀，完整度 20） |
-| 4 种塔同时攻击、UI 无异常 | 通过（`tower-probe.json`、`31-all-towers.png`） |
-| 分裂虫死亡生成 2 个碎片 | 通过（`split-probe.json`） |
-| 塔升级到 Lv.2、卖出 70% 返还 | 通过 |
-| `Space` 暂停 / 继续 | 通过（暂停标志与 Scene 状态同步） |
-| `F` / 速度按钮循环 1x→5x | 通过（1→2→3→4→5→1，HUD 显示 5x，`speed-verification.json`） |
-| 无尽模式进入与第 13 波 | 通过（HUD 13/∞，生成 33 个敌人，hpScale 1.62，`endless-verification.json`） |
-| 清空第 13 波后继续第 14 波 | 通过（未触发胜利，回到准备阶段） |
-| 自动下一波 | 通过（暂停面板开启后清空第 1 波，倒计时 3s，随后自动进入第 2 波，`auto-next-verification.json`） |
-| 第 12 波 Boss 出现、顶部血条可见 | 通过（`虚空母舰`） |
-| 清空第 12 波全部敌人 | 通过真实波次完成路径触发胜利 |
-| 胜利结算 / 最佳成绩写入 | 通过（评分 6714，写入 localStorage） |
-| 返回主菜单并重新读取最佳成绩 | 通过 |
-| 敌人漏到核心导致完整度归零 | 通过真实漏怪路径触发失败 |
-| 失败后重开 | 通过（信用点 220、塔数 0、阶段 prepare） |
-| 竖屏自动暂停 / 横屏恢复 | 通过（竖屏遮罩显示时 GameScene 已暂停） |
-| 844×390 横屏 / 390×844 竖屏提示 | 通过（横屏等比缩放；竖屏显示横屏遮罩） |
-| 844×390 手机横屏背景铺满 | 通过（两侧无黑边，游戏保持 16:9，`bgfill-verification.json`） |
-| 2560×1080 超宽屏背景铺满 | 通过（两侧由动态星空填充，`47-bgfill-ultrawide.png`） |
-| 2x 内部渲染与 UI 命中 | 通过（Canvas 2560×1440，开始/建塔/暂停/开波点击均正常，`sharpness-verification.json`） |
-| 1920×1080 清晰度检查 | 通过（`53-sharp-menu-1920.png`；生产构建见 `prod-sharpness.json`） |
-
-### 3.3 性能探针
-
-硬件加速 Headless Chrome（Intel Arc Pro 140T，ANGLE D3D11）：
-
-| 场景 | `game.loop.actualFps` |
-| --- | ---: |
-| 1x 渲染空场基线 | 63 |
-| 1x 渲染，30 个同屏敌人 | 约 95.7 |
-| 1x 渲染，60 个同屏敌人 | 约 109.9 |
-| 2x 渲染（2560×1440）空场基线 | 57.5 |
-| 2x 渲染（2560×1440），60 个同屏敌人 | 约 83.9 |
-| 清场后 | 约 116 |
-
-Headless 环境未限制渲染帧率，数值高于 60 fps 属正常；结果说明硬件路径下渲染不是瓶颈。  
-同场景在 SwiftShader 软件渲染下 60 个敌人约 20.8 fps，仅代表无 GPU 的软件回退路径，不代表正常台式/笔记本 GPU 表现。2x 渲染的 60 敌人探针仍高于 60 fps。
-
-### 3.4 验收证据
-
-- `artifacts/final-verification.json`：最终浏览器流程与响应式检查；
-- `artifacts/p1-final-verification.json`：帮助面板、下一波预览、生产构建检查；
-- `artifacts/p1-verification.json`：音量控制、竖屏自动暂停与暂停面板检查；
-- `artifacts/run-check.json`：全屏环境星空层与启动检查；
-- `artifacts/gameplay-verification.json`：建塔、升级/卖出、暂停、Boss、真实胜利、失败、重开、压力探针；
-- `artifacts/perf-probe.json`：硬件 WebGL 渲染器信息与帧率；
-- `artifacts/prod-smoke.json`：生产构建冒烟结果；
-- `artifacts/tower-probe.json`：四种塔同时攻击的运行检查；
-- `artifacts/split-probe.json`：分裂虫生成 2 个碎片的运行检查；
-- `artifacts/bgfill-verification.json`：16:9、手机横屏、2560×1080 超宽屏的背景铺满检查；
-- `artifacts/sharpness-verification.json`：2x 内部渲染、缩放相机与 UI 输入命中检查；
-- `artifacts/hidpi-perf.json`：2x 渲染下的性能探针；
-- `artifacts/prod-sharpness.json`：生产构建 2x 渲染冒烟；
-- `artifacts/speed-verification.json`：1x–5x 速度循环与 5x 战斗检查；
-- `artifacts/endless-verification.json`：无尽模式进入、第 13 波生成/清空与第 14 波检查；
-- `artifacts/auto-next-verification.json`：暂停面板开启自动下一波、清波倒计时与自动开波检查；
-- `artifacts/screenshots/`：菜单、帮助、战斗、暂停、Boss、胜利、失败、移动端等截图。
-
-主要截图：
+截图：
 
 | 场景 | 文件 |
 | --- | --- |
-| 主菜单（标准 / 无尽） | `artifacts/screenshots/63-menu-auto-next.png` |
-| 暂停：自动下一波设置 | `artifacts/screenshots/64-pause-auto-next.png` |
-| 自动下一波倒计时 | `artifacts/screenshots/66-auto-next-countdown.png` |
-| 无尽模式下一波预览 | `artifacts/screenshots/59-endless-wave13-preview.png` |
-| 1920×1080 高分辨率界面 | `artifacts/screenshots/53-sharp-menu-1920.png` |
-| 帮助面板 | `artifacts/screenshots/41-final-help-v11.png` |
-| 下一波预览 | `artifacts/screenshots/42-final-wave-preview.png` |
-| 战斗 | `artifacts/screenshots/04-game-wave.png` |
-| Boss 波 | `artifacts/screenshots/23-final-boss.png` |
-| 暂停（含音量控制） | `artifacts/screenshots/36-pause-volume.png` |
-| 胜利 | `artifacts/screenshots/24-final-victory.png` |
-| 失败 | `artifacts/screenshots/26-final-defeat.png` |
-| 移动端横屏 | `artifacts/screenshots/27-mobile-landscape.png` |
-| 手机横屏背景铺满 | `artifacts/screenshots/46-bgfill-mobile-landscape.png` |
-| 超宽屏背景铺满 | `artifacts/screenshots/47-bgfill-ultrawide.png` |
-| 竖屏自动暂停提示 | `artifacts/screenshots/37-portrait-paused.png` |
+| 制造与部署界面 | `artifacts/screenshots/80-tank-ui.png` |
+| 机枪兵部署 | `artifacts/screenshots/72-marine-deployed.png` |
+| 喷火兵部署 | `artifacts/screenshots/73-firebat-deployed.png` |
+| 喷火兵升级 | `artifacts/screenshots/76-firebat-upgrade.png` |
+| 喷火兵灼烧 | `artifacts/screenshots/79-firebat-burn.png` |
+| 攻城坦克远程炮击 | `artifacts/screenshots/83-tank-shell.png` |
+| 2 倍地图左侧 | `artifacts/screenshots/90-map-wide-initial.png` |
+| 拖动到地图中部 | `artifacts/screenshots/91-map-panned.png` |
+| 地图最右侧（指挥中心） | `artifacts/screenshots/92-map-right-edge.png` |
+| 平移后部署 | `artifacts/screenshots/93-panned-deploy.png` |
+| 1920×1080 平移检查 | `artifacts/screenshots/94-map-1920-panned.png` |
+| 星际素材本地包界面 | `artifacts/screenshots/99-sc-pack-final.png` |
+| 星际爆炸动画 | `artifacts/screenshots/100-sc-explosion.png` |
+| 星际素材静音面板 | `artifacts/screenshots/101-sc-muted.png` |
+| 虫族波次 | `artifacts/screenshots/102-zerg-wave.png` |
+| 最终 Boss 雷兽 | `artifacts/screenshots/103-zerg-boss.png` |
+| 多兵种战斗 | `artifacts/screenshots/75-unit-combat.png` |
 
----
+## 5. 与旧版本的关系
 
-## 4. 相对原方案的实现说明
+- 旧炮塔配置和数据入口被两个作战单位配置取代；`towers.ts` 保留了过渡别名以便迁移。
+- 旧炮塔纹理仍可生成但不再被玩法使用；后续可清理。
+- 旧版四塔/建造/卖出的玩家侧文案已替换。
+- 旧版验收报告不再作为当前玩法依据；本报告为 v2 验收记录。
 
-| 项目 | 说明 |
-| --- | --- |
-| GPU Filter | 原方案计划在核心/标题使用 Glow Filter。实际使用加法混合的 glow 贴图模拟发光，未启用逐对象 Filter，以降低兼容与性能风险；功能与视觉目标均已达到。 |
-| 粒子 | 使用轻量 `spark/glow/ring` 图片 + Tween 的自定义爆发效果，而非 Phaser ParticleEmitter；减少 API 依赖并方便控制数量。 |
-| 结算事件 | 原计划延迟 450 ms 弹出结算；实现改为游戏结束后立即发送 `game:result`，避免暂停/计时器边界下延迟回调丢失。 |
-| 包管理器 | 原方案写 pnpm；当前环境使用 npm 安装并生成 `package-lock.json`。脚本本身与包管理器无关，pnpm 也可用。 |
-| 移动端 | 等比缩放 + CSS 竖屏遮罩；竖屏/切后台自动暂停已补做，非 16:9 时由动态星空背景铺满两侧/上下，游戏保持比例。 |
-| 音效 | Web Audio 合成音效、静音开关与 5 档音量控制；无 BGM。 |
-| 波次预览 | 已补做：准备阶段显示下一波敌人构成与清波奖励（P1）。 |
-| 背景铺满 | 新增独立 HTML Canvas 星空/星云环境层；仅填充 letterbox 区域，不影响 Phaser 画面比例与 UI 命中区域。 |
-| 高分辨率渲染 | 游戏相机设置为 2x zoom 并保持在 1280×720 逻辑坐标系；画布内部 2560×1440，文本纹理 resolution=2。鼠标坐标经 `camera.getWorldPoint` 转回逻辑坐标，避免 UI 热区偏移。 |
-| 速度档位 | 由 1x/2x 扩展为 1x–5x；F 键或 HUD 速度按钮循环切换，固定步长最多补 12 步/帧。 |
-| 无尽模式 | 标准 12 波之外新增主菜单入口；第 13 波起由 `getWaveForIndex()` 生成 4 套轮换编队，血量随波次增长，清波后继续而非结算胜利；最高波次/最佳成绩沿用本地存档。 |
-| 自动下一波 | 新增持久化设置；清波进入准备阶段后启动 3 秒真实时间倒计时，HUD 按钮显示剩余秒数，倒计时归零自动开波；手动开波或关闭设置会取消倒计时，暂停时倒计时冻结。 |
-| 中局存档 | 未实现，符合原方案非目标。 |
+## 6. 已知限制
 
----
+1. 单位不会受到伤害，这是已确认的第一版范围；若后续加入单位生命/维修，需要新增敌人攻击逻辑与平衡。
+2. 横向地图尚未提供小地图，只提供顶部视角条；长距离拖动时定位依赖视角条。
+3. 标准 12 波与无尽模式沿用旧波次；地图变长、加入坦克后，完整通关与高波次数值曲线还需要真人试玩继续调参。
+3. 待部署区/生产队列暂不支持取消或退款。
+4. 喷火兵火焰视觉为短时程序化扇形，后续可加强粒子与音效层次。
+5. 语音为系统 TTS 生成；本地星际素材包存在时，机枪兵/坦克选中使用 SC selected 音效，其余事件保留 TTS/合成音。
+6. 星际素材权利归 Blizzard 等主体；本地包不提交、不随公开仓库分发，公开部署前必须移除或替换为已授权资源。
+7. 虫族敌人视觉使用本地可选包中的 Zerg 帧；无包时回退程序化虫群，名称仍为当前虫族名称。
 
-## 5. 已知限制与建议
+## 7. 运行
 
-1. **平衡性**：标准模式已能稳定通过第 1 波并在真实流程中完成第 12 波；无尽模式生成规则已完成，但高波次数值曲线建议继续真人试玩调参。
-2. **移动端**：游戏主体保持 16:9，超宽屏/手机横屏两侧由动态星空背景填充；触控目标已按 ≥56 逻辑像素设计，但尚未做真实设备手测。
-3. **音效主观质量**：Headless 验证环境静音，未评价合成音色的听感；需在有声设备上试听。
-4. **无障碍**：已提供键盘操作、音效/音量控制、减少动态效果与颜色冗余；Canvas 游戏未提供完整屏幕阅读器支持。
-
-后续优先级建议：先做真实设备/低端机性能与触控验收，再考虑 BGM、第二张地图、成就或更多关卡机制。
-
----
-
-## 6. 源码结构
-
-```text
-src/
-├─ data/       # 塔、敌人、波次、关卡配置
-├─ domain/     # 纯规则：战斗、索敌、路径、计分、经济
-├─ entities/   # Core / Enemy / Tower / Pad 视图
-├─ game/       # 常量与运行时类型
-├─ render/     # 程序化纹理、背景、特效
-├─ scenes/     # Boot / Menu / Game / UI
-├─ systems/    # 音效、存档
-├─ ui/         # Button、塔卡
-├─ events.ts   # 类型化 EventBus
-├─ main.ts     # Phaser 启动与 WebGL2 预检
-└─ types.ts    # 共享领域/UI 类型
-tests/         # 30 个单元测试
-artifacts/     # 验收 JSON 与截图
+```bash
+npm install
+npm run dev
 ```
+
+生产构建：
+
+```bash
+npm run build
+npm run preview
+```
+
+
+## 8. Codex：四兵种与工业指挥台升级（2026-11-07）
+
+- 需求：REQ-20261107-05 / docs/09-visual-command-overhaul.md。保留 Phaser 4.2.1、二维、1280×720 逻辑画面与双屏横向世界。
+- 制造菜单调整为 Marine、Goliath、坦克、Carrier。成本 60/120/180/260，生产 2/3.5/5/7 秒；4 号热键新增。喷火兵不再出现在当前制造入口。
+- 新增工业甲板绘制模块：2x 离屏烘焙成两块 2560px 纹理，包含板缝、铆钉、磨损、服务设施、跑道肩线、灯带与方向标。32 部署点保留；网格步长由64调为60，为150px指挥台留出空间，路线长度3060px（入口延伸至屏幕外）。
+- 操作台包含可点击小地图、四制造卡、生产/待部署、遥测/升级/撤离/目标和两项指挥按钮。相机与拖放保持屏幕/世界坐标转换。
+- 单位共用世界尺寸表，升级保持模型比例；16 方向渲染保留精灵透视，不再整张旋转。航母悬浮且绘制在地面单位之上。
+- 虫族 Zergling/Hydralisk/Lurker 每方向7帧，Ultralisk每方向9帧；共16方向。步态根据实际移动距离更新，暂停冻结。无包时用程序化附肢动作。
+- 武器新增炮口亮芯/光晕、步枪/双管曳光、重炮冲击和拦截机翼队。Goliath与航母增加独立合成射击音，并补8份原创系统TTS语音。视觉翼队不重复结算伤害。
+- 验证：typecheck、33/33单测、build通过；Chrome实际输入验证制造、非法拖放、四单位部署、升级不变形、小地图跳转与步态暂停；缺包fallback制造/部署/移动通过，844×390截图已检查。浏览器脚本异常0。
+- 证据：artifacts/visual-overhaul-verification.json、artifacts/screenshots/110–115。浏览器脚本 scripts/verify-visual.mjs 使用独立9233调试Chrome，额外注入水晶以覆盖高成本单位，不代表自然经济通关。
+- 限制：本轮未重跑完整战役/无尽平衡，不新增玩家单位自由移动；第三方图集仍是本地可选包，未提交或公开部署。制作好的public音频与程序化图形不依赖此本地包。
+
+
+## 9. 更正、品牌、人类机械风与背景音乐
+
+REQ-20261107-06/07：游戏改名“星际塔防”；第四兵种从Carrier更正为Battlecruiser，替换本地16方向模型与程序化锤头舰体、语音、标识、舰载激光炮及合成射击音，不再生成拦截机。原有本地Carrier文件留存但不再被manifest引用。
+
+菜单采用imagegen生成的原创深空战列舰背景（public/assets/art/terran-battlecruiser-menu.png），标题与按钮移至左侧金属指挥面板。顶部HUD增加模块化仪表窗、通风栅、铆钉及金属分层；共享按钮改为倒角装甲边框与低亮度状态灯，底部操作台同步配色。终点本地纹理为人族CommandCenter，缺包仍可运行。
+
+背景音乐为36.92秒原创程序合成循环，22.05kHz单声道PCM WAV。首次交互后启动、菜单/暂停独立开关、持久化musicEnabled、总音量/静音即时同步、页面隐藏暂停。浏览器实测音乐loop=true、playing=true、volume=0.14（总音量50%）、零音量/静音/独立关闭均暂停；关闭设置已写入存档。
+
+新增音乐字段对旧存档默认为开启，无需更改既有存档键。当前工作未提交/推送。基础Chrome验收、33项单测和生产构建通过；截图110–116与visual-overhaul-verification.json记录最终界面及战列舰。

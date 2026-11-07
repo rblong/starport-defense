@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "base": {
+        "viewX": 0,
+        "pathLength": 3136,
+        "pads": 32
+      },
+      "runtime": {
+        "phase": "wave",
+        "wave": 1,
+        "enemies": 8,
+        "integrity": 20,
+        "speed": 5,
+        "firstEnemy": {
+          "x": 837,
+          "y": 504,
+          "distance": 1061
+        },
+        "viewX": 0
+      },
+      "hd": {
+        "viewX": 500,
+        "canvas": {
+          "w": 2560,
+          "h": 1440,
+          "cssW": 1920,
+          "cssH": 1080
+        },
+        "cameraState": {
+          "viewX": 500,
+          "worldWidth": 2560,
+          "viewWidth": 1280
+        },
+        "phase": "wave"
+      }
+    }
+  ],
+  "errors": []
+}

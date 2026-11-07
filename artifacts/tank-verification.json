@@ -1,0 +1,121 @@
+{
+  "steps": [
+    {
+      "name": "ui-three-cards",
+      "cards": 3,
+      "names": [
+        "机枪兵",
+        "喷火兵",
+        "攻城坦克"
+      ],
+      "positions": [
+        {
+          "x": 16,
+          "y": 636,
+          "w": 0
+        },
+        {
+          "x": 160,
+          "y": 636,
+          "w": 0
+        },
+        {
+          "x": 304,
+          "y": 636,
+          "w": 0
+        }
+      ],
+      "crystals": 220,
+      "trayX": 448
+    },
+    {
+      "name": "tank-request",
+      "crystals": 40,
+      "active": {
+        "typeId": "tank",
+        "remaining": 4.416666666666669,
+        "duration": 5
+      },
+      "queue": [],
+      "prod": {
+        "active": {
+          "typeId": "tank",
+          "remaining": 4.466666666666669,
+          "duration": 5
+        },
+        "queue": [],
+        "ready": []
+      }
+    },
+    {
+      "name": "tank-ready",
+      "prod": {
+        "active": null,
+        "queue": [],
+        "ready": [
+          "tank"
+        ]
+      }
+    },
+    {
+      "name": "tank-deployed",
+      "units": [
+        "tank"
+      ],
+      "selection": {
+        "towerId": 1,
+        "typeId": "tank",
+        "level": 1,
+        "targetMode": "first",
+        "upgradeCost": 120,
+        "sellValue": 108,
+        "totalInvested": 180
+      },
+      "crystals": 40
+    },
+    {
+      "name": "shell-flight",
+      "enemies": 6,
+      "projectiles": 1,
+      "cooldowns": [
+        2.500000000000001
+      ]
+    },
+    {
+      "name": "after-shell",
+      "enemies": [
+        {
+          "hp": 5,
+          "distance": 217
+        },
+        {
+          "hp": 5,
+          "distance": 231
+        },
+        {
+          "hp": 5,
+          "distance": 245
+        },
+        {
+          "hp": 5,
+          "distance": 259
+        },
+        {
+          "hp": 5,
+          "distance": 273
+        },
+        {
+          "hp": 5,
+          "distance": 287
+        }
+      ],
+      "projectiles": 0,
+      "kills": 0
+    }
+  ],
+  "errors": [],
+  "audioRequests": [
+    "http://127.0.0.1:5173/audio/voice/tank-deploy.wav",
+    "http://127.0.0.1:5173/audio/voice/tank-select.wav"
+  ]
+}

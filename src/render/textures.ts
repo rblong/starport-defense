@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { COLORS } from '../game/constants';
-import type { EnemyId, TowerId } from '../types';
+import type { EnemyId, UnitId } from '../types';
+
+type LegacyTowerId = 'pulse' | 'mortar' | 'cryo' | 'arc';
 
 type Draw = (graphics: Phaser.GameObjects.Graphics) => void;
 
@@ -63,7 +65,7 @@ function makeSoftDot(scene: Phaser.Scene, key: string, size: number, color: numb
   });
 }
 
-function drawTowerBase(graphics: Phaser.GameObjects.Graphics, id: TowerId, accent: number): void {
+function drawTowerBase(graphics: Phaser.GameObjects.Graphics, id: LegacyTowerId, accent: number): void {
   const cx = 32;
   const cy = 32;
   graphics.fillStyle(0x050a16, 0.9);
@@ -97,7 +99,7 @@ function drawTowerBase(graphics: Phaser.GameObjects.Graphics, id: TowerId, accen
   }
 }
 
-function drawTowerHead(graphics: Phaser.GameObjects.Graphics, id: TowerId, accent: number): void {
+function drawTowerHead(graphics: Phaser.GameObjects.Graphics, id: LegacyTowerId, accent: number): void {
   const cx = 22;
   const cy = 22;
   if (id === 'pulse') {
@@ -326,13 +328,136 @@ function drawIconSkill(graphics: Phaser.GameObjects.Graphics): void {
   graphics.strokePath();
 }
 
-function drawTowerGhost(graphics: Phaser.GameObjects.Graphics, color: number): void {
-  graphics.lineStyle(2, color, 0.9);
-  graphics.strokeCircle(32, 32, 24);
-  graphics.lineStyle(1, color, 0.5);
-  graphics.strokeCircle(32, 32, 30);
-  graphics.fillStyle(color, 0.12);
-  graphics.fillCircle(32, 32, 24);
+function drawUnit(graphics: Phaser.GameObjects.Graphics, id: UnitId, accent: number): void {
+  const cx = 48;
+  const cy = 48;
+
+  // Ground shadow and deployment ring.
+  graphics.fillStyle(0x02060d, 0.55);
+  graphics.fillEllipse(cx, cy + 18, 40, 15);
+  graphics.lineStyle(1, accent, 0.35);
+  graphics.strokeCircle(cx, cy, 30);
+
+  if (id === 'battlecruiser') {
+    // Terran hammerhead: broad forward hull, armoured spine, twin engines.
+    fillPolygon(graphics, [{x:19,y:12},{x:77,y:12},{x:87,y:26},{x:73,y:40},{x:59,y:40},{x:59,y:72},{x:76,y:76},{x:76,y:88},{x:20,y:88},{x:20,y:76},{x:37,y:72},{x:37,y:40},{x:23,y:40},{x:9,y:26}], 0x68777e);
+    graphics.lineStyle(2, 0xb7c3c3); graphics.strokeRect(24,17,48,18);
+    graphics.fillStyle(0x344954); graphics.fillRect(40,26,16,50);
+    graphics.fillStyle(0x912f31); graphics.fillRect(16,23,18,9); graphics.fillRect(62,23,18,9); graphics.fillRect(42,48,12,18);
+    graphics.fillStyle(0xabc2c7); graphics.fillRect(43,28,10,12);
+    for (const x of [24,64]) { graphics.fillStyle(0x172c37); graphics.fillRect(x,72,8,15); graphics.fillStyle(0x6fd8ff); graphics.fillRect(x+1,84,6,8); }
+    for (let y=44;y<72;y+=7) { graphics.fillStyle(0x9ba8a7); graphics.fillRect(35,y,4,3); graphics.fillRect(57,y,4,3); }
+    return;
+  }
+  if (id !== 'tank') {
+    // Armoured legs and torso (top-down, facing up).
+    graphics.fillStyle(0x101b2c, 1);
+    graphics.fillRoundedRect(cx - 13, cy + 6, 9, 22, 4);
+    graphics.fillRoundedRect(cx + 4, cy + 6, 9, 22, 4);
+    graphics.fillStyle(0x1b3049, 1);
+    graphics.fillRoundedRect(cx - 17, cy - 12, 34, 29, 8);
+    graphics.lineStyle(1.5, accent, 0.8);
+    graphics.strokeRoundedRect(cx - 17, cy - 12, 34, 29, 8);
+  }
+
+  if (id === 'marine') {
+    // Shoulder plates, helmet and rifle.
+    graphics.fillStyle(0x294764, 1);
+    graphics.fillRoundedRect(cx - 26, cy - 10, 12, 18, 4);
+    graphics.fillRoundedRect(cx + 14, cy - 10, 12, 18, 4);
+    graphics.lineStyle(1, accent, 0.9);
+    graphics.strokeRoundedRect(cx - 26, cy - 10, 12, 18, 4);
+    graphics.strokeRoundedRect(cx + 14, cy - 10, 12, 18, 4);
+    graphics.fillStyle(0x344f6b, 1);
+    graphics.fillCircle(cx, cy - 15, 11);
+    graphics.fillStyle(accent, 0.95);
+    graphics.fillRoundedRect(cx - 8, cy - 20, 16, 5, 2);
+    graphics.fillStyle(0x0a1220, 1);
+    graphics.fillRoundedRect(cx + 5, cy - 42, 7, 31, 2);
+    graphics.fillStyle(accent, 0.9);
+    graphics.fillCircle(cx + 8, cy - 42, 3);
+    graphics.lineStyle(1, COLORS.white, 0.45);
+    graphics.beginPath();
+    graphics.moveTo(cx + 6, cy - 33);
+    graphics.lineTo(cx + 11, cy - 33);
+    graphics.strokePath();
+  } else if (id === 'goliath') {
+    // Goliath shoulder armour, cockpit and paired autocannon barrels.
+    graphics.fillStyle(0x3b2418, 1);
+    graphics.fillRoundedRect(cx - 29, cy - 9, 13, 22, 5);
+    graphics.fillRoundedRect(cx + 16, cy - 9, 13, 22, 5);
+    graphics.lineStyle(1, accent, 0.8);
+    graphics.strokeRoundedRect(cx - 29, cy - 9, 13, 22, 5);
+    graphics.strokeRoundedRect(cx + 16, cy - 9, 13, 22, 5);
+    graphics.fillStyle(0x69401d, 1);
+    graphics.fillCircle(cx, cy - 16, 13);
+    graphics.fillStyle(accent, 0.9);
+    graphics.fillRoundedRect(cx - 10, cy - 22, 20, 6, 2);
+    graphics.fillStyle(0x1b1208, 1);
+    graphics.fillRoundedRect(cx - 13, cy - 43, 8, 28, 2);
+    graphics.fillRoundedRect(cx + 5, cy - 43, 8, 28, 2);
+    graphics.fillStyle(accent, 0.95);
+    graphics.fillCircle(cx - 9, cy - 43, 4);
+    graphics.fillCircle(cx + 9, cy - 43, 4);
+    graphics.fillStyle(0x211407, 1);
+    graphics.fillRoundedRect(cx - 8, cy + 15, 16, 9, 3);
+  } else {
+    // Siege tank: tracked chassis, rotating turret and long cannon.
+    graphics.fillStyle(0x0d151e, 1);
+    graphics.fillRoundedRect(cx - 32, cy - 20, 13, 46, 5);
+    graphics.fillRoundedRect(cx + 19, cy - 20, 13, 46, 5);
+    graphics.lineStyle(2, accent, 0.55);
+    graphics.strokeRoundedRect(cx - 32, cy - 20, 13, 46, 5);
+    graphics.strokeRoundedRect(cx + 19, cy - 20, 13, 46, 5);
+    for (let i = 0; i < 5; i++) {
+      graphics.fillStyle(0x35495c, 1);
+      graphics.fillRect(cx - 31, cy - 14 + i * 8, 11, 4);
+      graphics.fillRect(cx + 20, cy - 14 + i * 8, 11, 4);
+    }
+
+    graphics.fillStyle(0x24384a, 1);
+    graphics.fillRoundedRect(cx - 22, cy - 16, 44, 38, 7);
+    graphics.lineStyle(1.5, accent, 0.9);
+    graphics.strokeRoundedRect(cx - 22, cy - 16, 44, 38, 7);
+
+    graphics.fillStyle(0x14222f, 1);
+    graphics.fillCircle(cx, cy - 4, 15);
+    graphics.lineStyle(2, accent, 0.95);
+    graphics.strokeCircle(cx, cy - 4, 15);
+    graphics.fillStyle(0x2c465a, 1);
+    graphics.fillCircle(cx, cy - 4, 9);
+
+    graphics.fillStyle(0x0a1119, 1);
+    graphics.fillRoundedRect(cx - 5, cy - 46, 10, 36, 3);
+    graphics.lineStyle(2, accent, 0.9);
+    graphics.strokeRoundedRect(cx - 5, cy - 46, 10, 36, 3);
+    graphics.fillStyle(accent, 1);
+    graphics.fillCircle(cx, cy - 46, 5);
+    graphics.fillStyle(0xfff2d0, 0.9);
+    graphics.fillCircle(cx, cy - 46, 2);
+
+    graphics.fillStyle(accent, 0.85);
+    graphics.fillRoundedRect(cx - 14, cy + 13, 28, 4, 2);
+  }
+}
+
+function drawIconCrystal(graphics: Phaser.GameObjects.Graphics): void {
+  const points = [
+    { x: 16, y: 2 },
+    { x: 26, y: 11 },
+    { x: 21, y: 28 },
+    { x: 11, y: 28 },
+    { x: 6, y: 11 },
+  ];
+  fillPolygon(graphics, points, COLORS.cyan, 0.9);
+  graphics.lineStyle(1.5, COLORS.white, 0.7);
+  graphics.beginPath();
+  graphics.moveTo(16, 2);
+  graphics.lineTo(16, 28);
+  graphics.moveTo(6, 11);
+  graphics.lineTo(21, 11);
+  graphics.lineTo(26, 11);
+  graphics.strokePath();
 }
 
 export function generateTextures(scene: Phaser.Scene): void {
@@ -400,59 +525,73 @@ export function generateTextures(scene: Phaser.Scene): void {
   });
 
   makeTexture(scene, 'core', 192, 192, (g) => {
-    const c = 96;
-    g.fillStyle(0x071426, 0.6);
-    g.fillCircle(c, c, 64);
-    g.lineStyle(2, COLORS.cyan, 0.3);
-    g.strokeCircle(c, c, 72);
-    g.lineStyle(2, COLORS.cyan, 0.7);
-    g.strokeCircle(c, c, 51);
-    strokePolygon(g, polygonPoints(c, c, 38, 6, Math.PI / 6), COLORS.cyan, 2, 0.9);
-    fillPolygon(g, polygonPoints(c, c, 28, 6, Math.PI / 6), 0x0c2633, 1);
-    g.fillStyle(COLORS.cyan, 0.65);
-    g.fillCircle(c, c, 17);
-    g.fillStyle(COLORS.white, 0.9);
-    g.fillCircle(c, c, 9);
-    g.fillStyle(COLORS.cyan, 0.35);
-    g.fillCircle(c, c, 28);
-    g.lineStyle(1.5, COLORS.white, 0.85);
-    g.beginPath();
-    g.moveTo(c - 16, c);
-    g.lineTo(c + 16, c);
-    g.moveTo(c, c - 16);
-    g.lineTo(c, c + 16);
-    g.strokePath();
+    // Raised command building with layered armour, service bays and a reactor.
+    fillPolygon(g, [{x:28,y:63},{x:57,y:40},{x:141,y:40},{x:164,y:65},{x:164,y:133},{x:138,y:151},{x:51,y:151},{x:28,y:130}], 0x071218);
+    fillPolygon(g, [{x:28,y:55},{x:57,y:32},{x:141,y:32},{x:164,y:57},{x:164,y:122},{x:138,y:140},{x:51,y:140},{x:28,y:120}], 0x4d5f65);
+    strokePolygon(g, [{x:28,y:55},{x:57,y:32},{x:141,y:32},{x:164,y:57},{x:164,y:122},{x:138,y:140},{x:51,y:140},{x:28,y:120}], 0x8da4a3, 2, 0.8);
+    g.fillStyle(0x273c45); g.fillRoundedRect(42,47,108,78,7);
+    g.lineStyle(2, 0x15272f); g.strokeRoundedRect(42,47,108,78,7);
+    for (const x of [45,130]) {
+      g.fillStyle(0x14242c); g.fillRect(x,60,16,47);
+      for (let y=63;y<106;y+=6) { g.fillStyle(0x7b8987); g.fillRect(x+2,y,12,2); }
+      g.fillStyle(0xe2bc70); g.fillRect(x+3,115,10,3);
+    }
+    g.fillStyle(0x1a2b35); g.fillRoundedRect(69,49,54,70,7);
+    g.lineStyle(2, 0x8ea7a5); g.strokeRoundedRect(69,49,54,70,7);
+    g.fillStyle(0x11222c); g.fillCircle(96,83,23);
+    g.lineStyle(2, COLORS.cyan, 0.7); g.strokeCircle(96,83,20);
+    g.fillStyle(0x269ab3); g.fillCircle(96,83,14);
+    g.fillStyle(0xb9ffff); g.fillCircle(96,83,7);
+    for (let x=79;x<118;x+=12) { g.fillStyle(0x91d5d5); g.fillRect(x,110,8,3); }
+    g.fillStyle(0x152c34); g.fillRect(75,126,42,16);
+    for (let y=128;y<141;y+=4) { g.fillStyle(0x788782); g.fillRect(77,y,38,1); }
+    g.fillStyle(0xb0c2b8); g.fillRect(144,23,3,36); g.fillRect(136,29,20,2);
+    g.fillStyle(COLORS.amber); g.fillCircle(145,23,3);
+    for (const x of [37,152]) for (const y of [56,120]) { g.fillStyle(0x172c33); g.fillCircle(x,y,3); g.fillStyle(0xabc0b8); g.fillCircle(x,y-1,1); }
   });
 
   // Build pads ----------------------------------------------------------------
-  makeTexture(scene, 'pad', 64, 64, (g) => {
-    strokePolygon(g, polygonPoints(32, 32, 24, 6, Math.PI / 6), COLORS.cyan, 1.2, 0.25);
-    g.lineStyle(1, COLORS.cyan, 0.18);
-    g.strokeCircle(32, 32, 16);
-    g.fillStyle(COLORS.cyan, 0.15);
-    g.fillCircle(32, 32, 2.5);
-  });
-
-  makeTexture(scene, 'pad-hover', 64, 64, (g) => {
-    strokePolygon(g, polygonPoints(32, 32, 25, 6, Math.PI / 6), COLORS.cyan, 2, 0.9);
-    g.lineStyle(1, COLORS.white, 0.45);
-    g.strokeCircle(32, 32, 17);
-    g.fillStyle(COLORS.cyan, 0.16);
-    g.fillCircle(32, 32, 25);
+  for (const active of [false, true]) makeTexture(scene, active ? 'pad-hover' : 'pad', 64, 64, (g) => {
+    g.fillStyle(0x091118, 0.65); g.fillEllipse(34, 37, 48, 39);
+    fillPolygon(g, polygonPoints(32, 31, 23, 6, Math.PI / 6), active ? 0x253c43 : 0x29353a);
+    strokePolygon(g, polygonPoints(32, 31, 23, 6, Math.PI / 6), active ? 0x8de4d9 : 0x74837c, 1.2, active ? 0.9 : 0.5);
+    g.lineStyle(1, 0x101b20); g.strokeCircle(32, 31, 15);
+    g.lineStyle(2, active ? 0x9fffee : 0xbdb488, active ? 0.9 : 0.5);
+    for (const dx of [-1,1]) for (const dy of [-1,1]) {
+      const x = 32 + dx * 17, y = 31 + dy * 14;
+      g.lineBetween(x,y,x-dx*5,y); g.lineBetween(x,y,x,y-dy*5);
+    }
+    g.fillStyle(active ? 0xafffe9 : 0x7d948d, 0.8); g.fillRect(30,29,4,4);
   });
 
   // Towers --------------------------------------------------------------------
-  const towerColors: Record<TowerId, number> = {
+  const towerColors: Record<LegacyTowerId, number> = {
     pulse: COLORS.cyan,
     mortar: COLORS.amber,
     cryo: COLORS.green,
     arc: COLORS.magenta,
   };
-  (Object.keys(towerColors) as TowerId[]).forEach((id) => {
+  (Object.keys(towerColors) as LegacyTowerId[]).forEach((id) => {
     makeTexture(scene, `tower-${id}-base`, 64, 64, (g) => drawTowerBase(g, id, towerColors[id]));
     makeTexture(scene, `tower-${id}-head`, 44, 44, (g) => drawTowerHead(g, id, towerColors[id]));
   });
-  makeTexture(scene, 'tower-ghost', 64, 64, (g) => drawTowerGhost(g, COLORS.cyan));
+
+  // Deployable human units -----------------------------------------------------
+  const unitColors: Record<UnitId, number> = {
+    marine: COLORS.cyan,
+    goliath: COLORS.amber,
+    battlecruiser: COLORS.green,
+    tank: COLORS.magenta,
+  };
+  (Object.keys(unitColors) as UnitId[]).forEach((id) => {
+    makeTexture(scene, `unit-${id}`, 96, 96, (g) => drawUnit(g, id, unitColors[id]));
+  });
+  makeTexture(scene, 'unit-ghost', 96, 96, (g) => {
+    g.lineStyle(2, COLORS.cyan, 0.75);
+    g.strokeCircle(48, 48, 34);
+    g.fillStyle(COLORS.cyan, 0.06);
+    g.fillCircle(48, 48, 34);
+  });
 
   // Enemies -------------------------------------------------------------------
   const enemyColors: Record<EnemyId, number> = {
@@ -473,7 +612,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   makeTexture(scene, 'bolt', 22, 8, (g) => {
     g.fillStyle(COLORS.cyan, 0.22);
     g.fillCircle(11, 4, 4);
-    g.fillStyle(COLORS.cyan, 0.95);
+    g.fillStyle(0xffdf9b, 0.95);
     g.fillRoundedRect(2, 2.5, 16, 3, 1.5);
     g.fillStyle(COLORS.white, 0.95);
     g.fillCircle(17, 4, 2);
@@ -498,6 +637,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   // HUD icons -----------------------------------------------------------------
   makeTexture(scene, 'icon-shield', 32, 32, drawIconShield);
   makeTexture(scene, 'icon-credit', 32, 32, drawIconCredit);
+  makeTexture(scene, 'icon-crystal', 32, 32, drawIconCrystal);
   makeTexture(scene, 'icon-wave', 32, 32, drawIconWave);
   makeTexture(scene, 'icon-skill', 32, 32, drawIconSkill);
 

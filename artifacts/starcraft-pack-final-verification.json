@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "name": "loaded",
+      "scMarine": true,
+      "scTank": true,
+      "scExplosion": true,
+      "anim": true,
+      "cardIcons": [
+        "sc-marine",
+        "unit-firebat",
+        "sc-tank"
+      ]
+    },
+    {
+      "name": "explosion",
+      "enemies": 0,
+      "kills": 4,
+      "explosionSprites": 5,
+      "playing": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "mute",
+      "pauseVisible": true,
+      "label": "音效：关"
+    }
+  ],
+  "errors": [],
+  "requests": [
+    "http://127.0.0.1:5173/assets/sc-local/manifest.json",
+    "http://127.0.0.1:5173/assets/sc-local/images/sc-marine.png",
+    "http://127.0.0.1:5173/assets/sc-local/manifest.json",
+    "http://127.0.0.1:5173/assets/sc-local/images/sc-marine.png",
+    "http://127.0.0.1:5173/assets/sc-local/images/sc-tank.png",
+    "http://127.0.0.1:5173/assets/sc-local/images/sc-explosion.png",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Button.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Button.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Marine.selected.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Marine.selected.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Marine.attack.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Marine.attack.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Tank.selected.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Tank.selected.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Tank.attack2.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Tank.attack2.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/upgrade.Terran.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/upgrade.Terran.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Zergling.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Zergling.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Hydralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Hydralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Ultralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Ultralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/TerranBuilding.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/TerranBuilding.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouWin.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouWin.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouLose.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouLose.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Zergling.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Marine.attack.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Tank.selected.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/upgrade.Terran.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Hydralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/Ultralisk.death.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouWin.wav",
+    "http://127.0.0.1:5173/assets/sc-local/audio/YouLose.wav"
+  ]
+}

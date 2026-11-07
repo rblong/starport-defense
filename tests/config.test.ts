@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { WAVES } from '../src/data/waves';
-import { TOWERS } from '../src/data/towers';
+import { UNITS } from '../src/data/towers';
 import { ENEMIES, ENEMY_MAP } from '../src/data/enemies';
-import { LEVEL_ONE, isOnPath } from '../src/data/level01';
+import { LEVEL_ONE, distanceToPath, isOnPath } from '../src/data/level01';
 import { expandWave, countWaveUnits } from '../src/domain/waves';
 import { TOTAL_WAVES } from '../src/game/constants';
 
@@ -34,14 +34,18 @@ describe('game configuration', () => {
     expect(used).toContain('boss');
   });
 
-  it('has three meaningful levels for every tower', () => {
-    expect(TOWERS).toHaveLength(4);
-    for (const tower of TOWERS) {
-      expect(tower.levels).toHaveLength(3);
-      expect(tower.levels[1]!.damage).toBeGreaterThan(tower.levels[0]!.damage);
-      expect(tower.levels[2]!.damage).toBeGreaterThan(tower.levels[1]!.damage);
-      expect(tower.upgradeCosts[0]).toBeGreaterThan(0);
-      expect(tower.upgradeCosts[1]).toBeGreaterThan(tower.upgradeCosts[0]);
+  it('has four deployable units with three meaningful levels each', () => {
+    expect(UNITS).toHaveLength(4);
+    expect(UNITS.map((unit) => unit.id)).toEqual(['marine', 'goliath', 'tank', 'battlecruiser']);
+    for (const unit of UNITS) {
+      expect(unit.levels).toHaveLength(3);
+      expect(unit.levels[1]!.damage).toBeGreaterThan(unit.levels[0]!.damage);
+      expect(unit.levels[2]!.damage).toBeGreaterThan(unit.levels[1]!.damage);
+      expect(unit.upgradeCosts[0]).toBeGreaterThan(0);
+      expect(unit.upgradeCosts[1]).toBeGreaterThan(unit.upgradeCosts[0]);
+      expect(unit.buildTime).toBeGreaterThan(0);
+      expect(unit.voice.select.length).toBeGreaterThan(0);
+      expect(['projectile', 'flame', 'artillery']).toContain(unit.attackKind);
     }
   });
 
@@ -56,8 +60,9 @@ describe('game configuration', () => {
     expect(ENEMY_MAP.boss.isBoss).toBe(true);
   });
 
-  it('has sixteen pads away from the path', () => {
-    expect(LEVEL_ONE.pads).toHaveLength(16);
+  it('has a widened map with pads away from the path', () => {
+    expect(LEVEL_ONE.cols).toBe(36);
+    expect(LEVEL_ONE.pads).toHaveLength(32);
     const seen = new Set<string>();
     for (const pad of LEVEL_ONE.pads) {
       expect(pad.col).toBeGreaterThanOrEqual(0);
@@ -65,17 +70,19 @@ describe('game configuration', () => {
       expect(pad.row).toBeGreaterThanOrEqual(0);
       expect(pad.row).toBeLessThan(LEVEL_ONE.rows);
       expect(isOnPath(pad)).toBe(false);
+      expect(distanceToPath(pad)).toBeGreaterThanOrEqual(LEVEL_ONE.tileSize * 0.5);
       const key = `${pad.col},${pad.row}`;
       expect(seen.has(key)).toBe(false);
       seen.add(key);
     }
   });
 
-  it('starts and ends the path at the expected map edges', () => {
+  it('starts off the left edge and ends at the right-side core', () => {
     const first = LEVEL_ONE.path[0]!;
     const last = LEVEL_ONE.path[LEVEL_ONE.path.length - 1]!;
     expect(first.col).toBeLessThan(0);
     expect(last).toEqual(LEVEL_ONE.core);
+    expect(LEVEL_ONE.core.col).toBe(LEVEL_ONE.cols - 1);
   });
 
   it('expands waves deterministically in spawn order', () => {

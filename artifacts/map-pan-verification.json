@@ -1,0 +1,78 @@
+{
+  "steps": [
+    {
+      "name": "initial-camera",
+      "viewX": 0,
+      "scrollX": -640,
+      "cameraState": {
+        "viewX": 0,
+        "worldWidth": 2560,
+        "viewWidth": 1280
+      },
+      "uiCamScroll": -640,
+      "worldWidth": 1280
+    },
+    {
+      "name": "after-drag-left",
+      "viewX": 500,
+      "scrollX": -140,
+      "cameraState": {
+        "viewX": 500,
+        "worldWidth": 2560,
+        "viewWidth": 1280
+      }
+    },
+    {
+      "name": "keyboard-pan",
+      "afterD": 680,
+      "afterA": 500
+    },
+    {
+      "name": "right-clamp",
+      "viewX": 1280,
+      "scrollX": 640,
+      "cameraState": {
+        "viewX": 1280,
+        "worldWidth": 2560,
+        "viewWidth": 1280
+      }
+    },
+    {
+      "name": "panned-deploy-pad",
+      "pad": {
+        "x": 608,
+        "y": 376,
+        "screenX": 108,
+        "screenY": 376
+      },
+      "cameraViewX": 500
+    },
+    {
+      "name": "panned-deploy-result",
+      "units": [
+        "marine"
+      ],
+      "cameraViewX": 500,
+      "ready": [],
+      "selection": {
+        "towerId": 1,
+        "typeId": "marine",
+        "level": 1,
+        "targetMode": "first",
+        "upgradeCost": 60,
+        "sellValue": 36,
+        "totalInvested": 60
+      }
+    },
+    {
+      "name": "panned-select",
+      "selected": "marine",
+      "viewX": 500
+    }
+  ],
+  "errors": [],
+  "audioRequests": [
+    "http://127.0.0.1:5173/audio/voice/marine-deploy.wav",
+    "http://127.0.0.1:5173/audio/voice/marine-select.wav"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "menu": true,
+  "enemy": {
+    "wave": 1,
+    "count": 2,
+    "name": "跳虫",
+    "id": "scout",
+    "texture": "enemy-scout",
+    "scZergling": false
+  },
+  "errors": []
+}

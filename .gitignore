@@ -1,5 +1,10 @@
-﻿node_modules/
+node_modules/
 dist/
 .pnpm-store/
 .vite/
 *.log
+.tmp/
+
+# Third-party StarCraft reference assets collected locally; never publish them.
+artifacts/starcraft1/
+public/assets/sc-local/

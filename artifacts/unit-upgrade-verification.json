@@ -1,0 +1,47 @@
+{
+  "steps": [
+    {
+      "name": "before-upgrade",
+      "crystals": 380,
+      "level": 1,
+      "selection": {
+        "towerId": 1,
+        "typeId": "firebat",
+        "level": 1,
+        "targetMode": "first",
+        "upgradeCost": 100,
+        "sellValue": 72,
+        "totalInvested": 120
+      }
+    },
+    {
+      "name": "after-upgrade",
+      "crystals": 280,
+      "level": 2,
+      "selection": {
+        "towerId": 1,
+        "typeId": "firebat",
+        "level": 2,
+        "targetMode": "first",
+        "upgradeCost": 150,
+        "sellValue": 132,
+        "totalInvested": 220
+      },
+      "selectedType": "firebat"
+    },
+    {
+      "name": "after-retreat",
+      "crystals": 412,
+      "units": 0,
+      "selection": null,
+      "ready": []
+    }
+  ],
+  "errors": [],
+  "audioRequests": [
+    "http://127.0.0.1:5173/audio/voice/firebat-deploy.wav",
+    "http://127.0.0.1:5173/audio/voice/firebat-select.wav",
+    "http://127.0.0.1:5173/audio/voice/firebat-upgrade.wav",
+    "http://127.0.0.1:5173/audio/voice/firebat-retreat.wav"
+  ]
+}

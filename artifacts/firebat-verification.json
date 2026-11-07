@@ -1,0 +1,56 @@
+{
+  "steps": [
+    {
+      "name": "firebat-engaged",
+      "unit": "firebat",
+      "cooldown": 0.5000000000000009,
+      "target": 6,
+      "enemies": [
+        {
+          "hp": 60,
+          "burnUntil": 0,
+          "burnDps": 0,
+          "distance": 232
+        },
+        {
+          "hp": 12,
+          "burnUntil": 5.549999999999995,
+          "burnDps": 8,
+          "distance": 248
+        },
+        {
+          "hp": 12,
+          "burnUntil": 5.549999999999995,
+          "burnDps": 8,
+          "distance": 264
+        },
+        {
+          "hp": 12,
+          "burnUntil": 5.549999999999995,
+          "burnDps": 8,
+          "distance": 280
+        },
+        {
+          "hp": 12,
+          "burnUntil": 5.549999999999995,
+          "burnDps": 8,
+          "distance": 296
+        },
+        {
+          "hp": 12,
+          "burnUntil": 5.549999999999995,
+          "burnDps": 8,
+          "distance": 312
+        }
+      ],
+      "burning": 5
+    },
+    {
+      "name": "firebat-after-burn",
+      "enemies": 4,
+      "kills": 2,
+      "burning": 4
+    }
+  ],
+  "errors": []
+}

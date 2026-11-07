@@ -18,7 +18,7 @@ export class CoreView {
     this.glow = scene.add.image(0, 0, 'glow');
     this.glow.setTint(COLORS.cyan);
     this.glow.setBlendMode(Phaser.BlendModes.ADD);
-    this.glow.setScale(1.7);
+    this.glow.setScale(1.2);
     this.glow.setAlpha(0.5);
     this.container.add(this.glow);
 
@@ -26,18 +26,20 @@ export class CoreView {
     this.ring.setTint(COLORS.cyan);
     this.ring.setBlendMode(Phaser.BlendModes.ADD);
     this.ring.setScale(1.08);
-    this.ring.setAlpha(0.5);
+    this.ring.setAlpha(0.18);
     this.container.add(this.ring);
 
     this.ringOuter = scene.add.image(0, 0, 'ring');
     this.ringOuter.setTint(COLORS.cyanDim);
     this.ringOuter.setBlendMode(Phaser.BlendModes.ADD);
     this.ringOuter.setScale(1.55);
-    this.ringOuter.setAlpha(0.22);
+    this.ringOuter.setAlpha(0.09);
     this.container.add(this.ringOuter);
 
-    this.core = scene.add.image(0, 0, 'core');
+    this.core = scene.add.image(0, 0, scene.textures.exists('sc-command-center') ? 'sc-command-center' : 'core');
     this.container.add(this.core);
+    const label = scene.add.text(0, 70, 'COMMAND / 指挥中心', { fontFamily: 'Consolas, Microsoft YaHei, monospace', fontSize: '10px', color: '#b1c9c9', backgroundColor: '#14232b', padding: {left: 6, right: 6, top: 3, bottom: 3} }).setOrigin(0.5, 0);
+    this.container.add(label);
 
     scene.tweens.add({
       targets: this.core,

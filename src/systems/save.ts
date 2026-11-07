@@ -6,6 +6,7 @@ const PROGRESS_KEY = 'starport-defense:v1:progress';
 const DEFAULT_SETTINGS: SettingsData = {
   version: 1,
   soundEnabled: true,
+  musicEnabled: true,
   reducedMotion: false,
   defaultSpeed: 1,
   volume: 0.5,
@@ -80,6 +81,7 @@ function normalizeSettings(value: Partial<SettingsData> | null): SettingsData {
   return {
     version: 1,
     soundEnabled: typeof value?.soundEnabled === 'boolean' ? value.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
+    musicEnabled: typeof value?.musicEnabled === 'boolean' ? value.musicEnabled : true,
     reducedMotion: typeof value?.reducedMotion === 'boolean' ? value.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     defaultSpeed,
     volume,

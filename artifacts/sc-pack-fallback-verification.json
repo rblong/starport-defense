@@ -1,0 +1,14 @@
+{
+  "test": "local StarCraft pack absent fallback",
+  "date": "2026-11-07",
+  "viewport": { "width": 1280, "height": 720, "deviceScaleFactor": 1 },
+  "result": {
+    "menuBooted": true,
+    "scMarineTextureLoaded": false,
+    "proceduralMarineTextureLoaded": true,
+    "bootMessageRemoved": true,
+    "fatalMessageHidden": true,
+    "runtimeErrors": 0
+  },
+  "note": "The optional pack was moved away for this check, then restored. The game boots with procedural art/audio when the pack is absent."
+}

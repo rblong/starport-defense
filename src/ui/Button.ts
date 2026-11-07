@@ -153,9 +153,15 @@ export class Button {
 
     this.bg.clear();
     this.bg.fillStyle(fill, 0.94);
-    this.bg.fillRoundedRect(0, 0, this.width, this.height, 8);
+    this.bg.fillRoundedRect(0, 0, this.width, this.height, 3);
     this.bg.lineStyle(this.active ? 2 : 1, color, borderAlpha);
-    this.bg.strokeRoundedRect(0.5, 0.5, this.width - 1, this.height - 1, 8);
+    this.bg.strokeRoundedRect(0.5, 0.5, this.width - 1, this.height - 1, 3);
+    // Bevelled steel bezel, recessed display, and mounting screws.
+    this.bg.lineStyle(1, 0x8a9995, this.hovered ? 0.7 : 0.3);
+    this.bg.lineBetween(3, 3, this.width - 4, 3); this.bg.lineBetween(3, 3, 3, this.height - 4);
+    this.bg.lineStyle(2, 0x071015, 0.9);
+    this.bg.lineBetween(4, this.height - 3, this.width - 3, this.height - 3);
+    for (const x of [6, this.width - 6]) { this.bg.fillStyle(0x82918a, 0.7); this.bg.fillCircle(x,this.height - 7,1); }
     // A tiny corner accent makes the buttons feel part of the HUD.
     this.bg.lineStyle(2, color, this.enabled ? 0.7 : 0.2);
     this.bg.beginPath();

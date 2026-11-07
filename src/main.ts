@@ -73,6 +73,7 @@ if (!supportsWebGL2()) {
 
     if (import.meta.env.DEV) {
       (window as unknown as { __starportGame?: Phaser.Game }).__starportGame = game;
+      (window as unknown as { __starportAudio?: typeof audio }).__starportAudio = audio;
     }
 
     if (import.meta.hot) {

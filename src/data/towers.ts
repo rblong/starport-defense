@@ -1,73 +1,103 @@
-import type { TowerConfig, TowerId } from '../types';
+import type { UnitConfig, UnitId } from '../types';
 import { COLORS } from '../game/constants';
 
-export const TOWERS: TowerConfig[] = [
+/**
+ * Four deployable Terran-style combat units. Costs are paid when the player
+ * requests manufacturing; deployment itself is free.
+ */
+export const UNITS: UnitConfig[] = [
   {
-    id: 'pulse',
-    name: '脉冲炮塔',
+    id: 'marine',
+    name: 'Marine',
     hotkey: '1',
     cost: 60,
+    buildTime: 2,
     attackKind: 'projectile',
     accent: COLORS.cyan,
-    description: '追踪能量弹，稳定单体输出。前期主力，对高速目标可靠。',
+    description: '轻装陆战人员，单发步枪持续点射。成本低，是前期最可靠的单体火力。',
     levels: [
       { damage: 12, cooldown: 0.45, range: 160, projectileSpeed: 900 },
-      { damage: 18, cooldown: 0.42, range: 165, projectileSpeed: 960 },
-      { damage: 26, cooldown: 0.36, range: 175, projectileSpeed: 1040 },
+      { damage: 18, cooldown: 0.45, range: 165, projectileSpeed: 960 },
+      { damage: 26, cooldown: 0.42, range: 175, projectileSpeed: 1040 },
     ],
-    upgradeCosts: [55, 85],
+    upgradeCosts: [60, 90],
+    voice: {
+      select: '机枪兵，听候指令。',
+      deploy: '机枪兵，部署完毕。',
+      upgrade: '机枪兵，装备升级完成。',
+      retreat: '机枪兵，撤离阵地。',
+    },
   },
   {
-    id: 'mortar',
-    name: '榴弹迫击炮',
+    id: 'goliath',
+    name: 'Goliath',
     hotkey: '2',
-    cost: 100,
-    attackKind: 'splash',
-    accent: COLORS.amber,
-    description: '抛射榴弹，落点范围伤害。适合清理密集虫群与破甲。',
-    levels: [
-      { damage: 32, cooldown: 1.8, range: 210, projectileSpeed: 380, splashRadius: 60 },
-      { damage: 50, cooldown: 1.7, range: 220, projectileSpeed: 420, splashRadius: 68 },
-      { damage: 75, cooldown: 1.55, range: 235, projectileSpeed: 460, splashRadius: 78 },
-    ],
-    upgradeCosts: [80, 120],
-  },
-  {
-    id: 'cryo',
-    name: '霜冻发生器',
-    hotkey: '3',
-    cost: 80,
-    attackKind: 'aura',
-    accent: COLORS.green,
-    description: '范围脉冲，伤害并减速所有命中目标。与高伤害塔形成配合。',
-    levels: [
-      { damage: 5, cooldown: 1.0, range: 140, slowFactor: 0.3, slowDuration: 1.6 },
-      { damage: 8, cooldown: 0.95, range: 150, slowFactor: 0.35, slowDuration: 1.7 },
-      { damage: 12, cooldown: 0.9, range: 165, slowFactor: 0.45, slowDuration: 2.0 },
-    ],
-    upgradeCosts: [65, 95],
-  },
-  {
-    id: 'arc',
-    name: '电弧线圈',
-    hotkey: '4',
     cost: 120,
-    attackKind: 'chain',
-    accent: COLORS.magenta,
-    description: '瞬发连锁闪电，最多命中多个目标。单体偏弱，清群强势。',
+    buildTime: 3.5,
+    attackKind: 'projectile',
+    accent: COLORS.amber,
+    description: '双足重型机甲，双管自动炮连续压制，适合对付装甲目标。',
     levels: [
-      { damage: 22, cooldown: 1.3, range: 165, chainCount: 3, chainRadius: 110, chainFalloff: 0.65 },
-      { damage: 32, cooldown: 1.25, range: 175, chainCount: 4, chainRadius: 120, chainFalloff: 0.65 },
-      { damage: 45, cooldown: 1.15, range: 190, chainCount: 5, chainRadius: 130, chainFalloff: 0.65 },
+      { damage: 26, cooldown: 0.75, range: 185, projectileSpeed: 780 },
+      { damage: 39, cooldown: 0.70, range: 195, projectileSpeed: 840 },
+      { damage: 57, cooldown: 0.65, range: 210, projectileSpeed: 900 },
     ],
-    upgradeCosts: [90, 130],
+    upgradeCosts: [100, 150],
+    voice: {
+      select: '歌利亚，火控就绪。',
+      deploy: '歌利亚，阵地就绪。',
+      upgrade: '歌利亚，双管火炮升级。',
+      retreat: '歌利亚，撤离阵地。',
+    },
+  },
+  {
+    id: 'tank',
+    name: '攻城坦克',
+    hotkey: '3',
+    cost: 180,
+    buildTime: 5,
+    attackKind: 'artillery',
+    accent: COLORS.magenta,
+    description: '远程攻城装甲单位，超远射程炮击并在落点造成范围伤害。适合处理成列虫群。',
+    levels: [
+      { damage: 55, cooldown: 2.8, range: 260, projectileSpeed: 400, splashRadius: 70 },
+      { damage: 80, cooldown: 2.6, range: 275, projectileSpeed: 440, splashRadius: 80 },
+      { damage: 115, cooldown: 2.4, range: 290, projectileSpeed: 480, splashRadius: 90 },
+    ],
+    upgradeCosts: [120, 180],
+    voice: {
+      select: '攻城坦克，火力待命。',
+      deploy: '攻城坦克，部署完毕。',
+      upgrade: '攻城坦克，主炮升级。',
+      retreat: '攻城坦克，撤离阵地。',
+    },
+  },
+  {
+    id: 'battlecruiser', name: '战列巡航舰', hotkey: '4', cost: 260, buildTime: 7,
+    attackKind: 'projectile', accent: COLORS.green,
+    description: '大型空中支援舰，舰载激光炮进行远距离精确打击。',
+    levels: [
+      { damage: 34, cooldown: 0.9, range: 285, projectileSpeed: 440 },
+      { damage: 51, cooldown: 0.82, range: 305, projectileSpeed: 490 },
+      { damage: 74, cooldown: 0.75, range: 325, projectileSpeed: 540 },
+    ],
+    upgradeCosts: [160, 220],
+    voice: {
+      select: '战列巡航舰，舰队待命。', deploy: '战列巡航舰，进入防御轨道。',
+      upgrade: '战列巡航舰，舰载激光炮升级。', retreat: '战列巡航舰，撤出战区。',
+    },
   },
 ];
 
-export const TOWER_MAP = Object.fromEntries(
-  TOWERS.map((tower) => [tower.id, tower]),
-) as Record<TowerId, TowerConfig>;
+export const UNIT_MAP = Object.fromEntries(
+  UNITS.map((unit) => [unit.id, unit]),
+) as Record<UnitId, UnitConfig>;
 
-export function getTowerStats(towerId: TowerId, level: 1 | 2 | 3) {
-  return TOWER_MAP[towerId].levels[level - 1];
+export function getUnitStats(unitId: UnitId, level: 1 | 2 | 3) {
+  return UNIT_MAP[unitId].levels[level - 1];
 }
+
+// Transitional aliases so older imports keep compiling during the rework.
+export const TOWERS = UNITS;
+export const TOWER_MAP = UNIT_MAP;
+export const getTowerStats = getUnitStats;

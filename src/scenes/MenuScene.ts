@@ -22,6 +22,7 @@ export class MenuScene extends Phaser.Scene {
   private helpOpen = false;
   private soundButton!: Button;
   private motionButton!: Button;
+  private musicButton!: Button;
   private volumeButton!: Button;
   private autoNextButton!: Button;
   private soundLabel = '音效：开';
@@ -46,75 +47,29 @@ export class MenuScene extends Phaser.Scene {
     this.autoNextEnabled = settings.autoNextWave;
     this.backdrop = createMenuBackdrop(this);
 
-    // Title composition ------------------------------------------------------
-    const titleGlow = this.add.image(GAME_WIDTH / 2, 208, 'glow');
-    titleGlow.setDepth(-5);
-    titleGlow.setTint(COLORS.cyan);
-    titleGlow.setBlendMode(Phaser.BlendModes.ADD);
-    titleGlow.setScale(3.4, 1.2);
-    titleGlow.setAlpha(0.24);
-
-    const overline = this.add.text(GAME_WIDTH / 2, 112, 'NEXUS-7  //  ORBITAL DEFENSE PROTOCOL', {
-      fontFamily: '"Cascadia Mono", "Consolas", monospace',
-      fontSize: '13px',
-      color: CSS_COLORS.cyan,
-      letterSpacing: 5,
-    });
-    overline.setOrigin(0.5);
-    overline.setAlpha(0.85);
-
-    const title = this.add.text(GAME_WIDTH / 2, 186, '星 港 防 线', {
-      fontFamily: FONT_FAMILY,
-      fontSize: '72px',
-      color: CSS_COLORS.text,
-      fontStyle: 'bold',
-      letterSpacing: 10,
-      stroke: '#0a2b3b',
-      strokeThickness: 8,
-    });
-    title.setOrigin(0.5);
-    title.setShadow(0, 0, '#39e7ff', 24, true, true);
-
-    const english = this.add.text(GAME_WIDTH / 2, 268, 'S T A R P O R T   D E F E N S E', {
-      fontFamily: '"Cascadia Mono", "Consolas", monospace',
-      fontSize: '14px',
-      color: CSS_COLORS.muted,
-      letterSpacing: 7,
-    });
-    english.setOrigin(0.5);
-
-    const rule = this.add.graphics().setDepth(1);
-    rule.lineStyle(1, COLORS.cyan, 0.6);
-    rule.beginPath();
-    rule.moveTo(430, 306);
-    rule.lineTo(850, 306);
-    rule.strokePath();
-    rule.fillStyle(COLORS.cyan, 0.9);
-    rule.fillCircle(640, 306, 3);
-
-    const tagline = this.add.text(GAME_WIDTH / 2, 330, '在 12 波虫群中守住星港跃迁核心', {
-      fontFamily: FONT_FAMILY,
-      fontSize: '17px',
-      color: CSS_COLORS.muted,
-      letterSpacing: 2,
-    });
-    tagline.setOrigin(0.5);
+    // Armoured human fleet command panel.
+    const overline = this.add.text(260,116,'TERRAN EXPEDITIONARY COMMAND', {fontFamily:'Consolas, monospace',fontSize:'10px',color:'#b8a678',letterSpacing:2}).setOrigin(0.5);
+    overline.setAlpha(0.9);
+    this.add.text(260,177,'星际塔防', {fontFamily:FONT_FAMILY,fontSize:'58px',fontStyle:'bold',color:'#e0ddc8',stroke:'#171e21',strokeThickness:5,letterSpacing:5}).setOrigin(0.5).setShadow(2,4,'#000000',3,true,true);
+    this.add.text(260,230,'INTERSTELLAR DEFENSE', {fontFamily:'Consolas, monospace',fontSize:'11px',color:'#99aaa6',letterSpacing:3}).setOrigin(0.5);
+    const rule = this.add.graphics();rule.lineStyle(1,0xa99465,0.6);rule.lineBetween(110,262,410,262);
+    this.add.text(260,286,'人类远征舰队 · NEXUS–7 防御协议',{fontFamily:FONT_FAMILY,fontSize:'12px',color:'#a8b9b1'}).setOrigin(0.5);
 
     // Best score panel -------------------------------------------------------
     const progress = loadProgress();
     const panel = this.add.graphics();
     panel.fillStyle(COLORS.panel, 0.75);
-    panel.fillRoundedRect(926, 86, 300, 88, 10);
+    panel.fillRoundedRect(926, 546, 300, 88, 10);
     panel.lineStyle(1, COLORS.lineBright, 0.65);
-    panel.strokeRoundedRect(926.5, 86.5, 299, 87, 10);
+    panel.strokeRoundedRect(926.5, 546.5, 299, 87, 10);
 
-    this.add.text(950, 102, '作战记录', {
+    this.add.text(950, 562, '作战记录', {
       fontFamily: FONT_FAMILY,
       fontSize: '13px',
       color: CSS_COLORS.cyan,
       letterSpacing: 2,
     });
-    this.add.text(950, 126, `最佳评分  ${progress.bestScore.toLocaleString('zh-CN')}`, {
+    this.add.text(950, 586, `最佳评分  ${progress.bestScore.toLocaleString('zh-CN')}`, {
       fontFamily: FONT_FAMILY,
       fontSize: '16px',
       color: CSS_COLORS.text,
@@ -124,7 +79,7 @@ export class MenuScene extends Phaser.Scene {
       progress.bestWave > TOTAL_WAVES
         ? `最高波次  无尽 ${progress.bestWave} 波`
         : `最高波次  ${progress.bestWave} / ${TOTAL_WAVES}`;
-    this.add.text(950, 150, `${bestWaveLabel}      ${progress.cleared ? '已通关' : '未通关'}`, {
+    this.add.text(950, 610, `${bestWaveLabel}      ${progress.cleared ? '已通关' : '未通关'}`, {
       fontFamily: FONT_FAMILY,
       fontSize: '12px',
       color: CSS_COLORS.muted,
@@ -132,8 +87,8 @@ export class MenuScene extends Phaser.Scene {
 
     // Actions ----------------------------------------------------------------
     const standardButton = new Button(this, {
-      x: 490,
-      y: 386,
+      x: 110,
+      y: 330,
       width: 146,
       height: 66,
       label: '标准模式',
@@ -146,8 +101,8 @@ export class MenuScene extends Phaser.Scene {
     standardButton.container.setDepth(2);
 
     const endlessButton = new Button(this, {
-      x: 644,
-      y: 386,
+      x: 264,
+      y: 330,
       width: 146,
       height: 66,
       label: '无尽模式',
@@ -160,8 +115,8 @@ export class MenuScene extends Phaser.Scene {
     endlessButton.container.setDepth(2);
 
     const helpButton = new Button(this, {
-      x: 490,
-      y: 478,
+      x: 110,
+      y: 412,
       width: 146,
       height: 50,
       label: '玩法说明',
@@ -176,8 +131,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.soundLabel = audio.isMuted() ? '音效：关' : '音效：开';
     this.soundButton = new Button(this, {
-      x: 644,
-      y: 478,
+      x: 264,
+      y: 412,
       width: 146,
       height: 50,
       label: this.soundLabel,
@@ -194,8 +149,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.motionLabel = this.reducedMotion ? '动态效果：减少' : '动态效果：标准';
     this.motionButton = new Button(this, {
-      x: 490,
-      y: 544,
+      x: 110,
+      y: 474,
       width: 146,
       height: 40,
       label: this.motionLabel,
@@ -213,8 +168,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.volumeLabel = audio.getVolumeLabel();
     this.volumeButton = new Button(this, {
-      x: 644,
-      y: 544,
+      x: 264,
+      y: 474,
       width: 146,
       height: 40,
       label: this.volumeLabel,
@@ -229,8 +184,8 @@ export class MenuScene extends Phaser.Scene {
     this.volumeButton.container.setDepth(2);
 
     this.autoNextButton = new Button(this, {
-      x: 490,
-      y: 596,
+      x: 110,
+      y: 526,
       width: 300,
       height: 36,
       label: this.autoNextLabel(),
@@ -244,17 +199,22 @@ export class MenuScene extends Phaser.Scene {
       },
     });
     this.autoNextButton.container.setDepth(2);
+    this.musicButton = new Button(this, { x: 110, y: 574, width: 300, height: 32,
+      label: audio.getMusicLabel(), fontSize: 12, accent: COLORS.green,
+      onClick: () => { audio.toggleMusic(); this.musicButton.setLabel(audio.getMusicLabel()); } });
+    this.musicButton.container.setDepth(2);
+
 
     this.add
-      .text(GAME_WIDTH / 2, 658, '提示：标准模式 12 波，或进入无尽模式冲击最高波次。准备阶段不限时。', {
+      .text(260, 623, 'ENTER 标准战役  /  E 无尽防守', {
         fontFamily: FONT_FAMILY,
-        fontSize: '14px',
+        fontSize: '10px',
         color: CSS_COLORS.muted,
       })
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH - 28, GAME_HEIGHT - 24, 'v1.0.0 · PHASER 4.2.1 · WEBGL2', {
+      .text(GAME_WIDTH - 28, GAME_HEIGHT - 24, 'v2.0.0 · PHASER 4.2.1 · WEBGL2', {
         fontFamily: '"Cascadia Mono", "Consolas", monospace',
         fontSize: '10px',
         color: '#4c6880',
@@ -316,18 +276,19 @@ export class MenuScene extends Phaser.Scene {
     this.helpModal.add(title);
 
     const body = [
-      '【目标】守住地图右侧的跃迁核心，抵挡 12 波异星虫群，最终击毁虚空母舰。',
+      '【目标】守住地图右侧的指挥中心，抵挡 12 波虫族，最终击杀雷兽。',
       '',
-      '【模式】主菜单可选择标准 12 波战役，或进入无尽模式持续冲击更高波次。',
-      '【建造】点击底部塔卡或按 1–4 选塔，再点击战场上的六边形建造位。',
-      '　　　　波次进行中也可以建造、升级和卖出。',
-      '【升级】点击已建塔，在底部面板升级到 3 级，或按 70% 返还卖出；可切换索敌优先级。',
-      '【克制】装甲虫有高额护甲，优先使用高单发或范围伤害；霜冻发生器能减速，电弧线圈擅长清理密集虫群。',
+      '【制造】点击底部制造卡或按 1 / 2 / 3 / 4 申请制造，消耗水晶进入生产队列。',
+      '【部署】制造完成后，拖动待部署单位到六边形部署点；也可点击单位再点击部署点。',
+      '【视角】按住战场左右拖动查看更宽的地图；A / D 或 ← / → 也可平移。',
+      '【兵种】Marine：快速点射；Goliath：双管火力；坦克：范围重炮；战列巡航舰：舰载激光炮远程支援。',
+      '【升级】点击已部署单位，在底部面板升级到 3 级，或撤离返还 60% 已投入水晶。',
+      '【水晶】击杀敌人与清波获得水晶；水晶不足时无法申请制造。',
       '【轨道轰炸】按 Q 或点击技能按钮，再点击战场位置。0.4 秒预警后降下 200 点无视护甲的范围伤害，冷却 30 秒。',
-      '【节奏】准备阶段不限时，点击「开始第 N 波」才出兵。敌人漏到核心会扣除完整度，完整度归零则失败。',
-      '【设置】主菜单与暂停面板可调整音效、音量和动态效果。',
+      '【节奏】准备阶段不限时，点击「开始第 N 波」才出兵。敌人漏到指挥中心会扣除完整度，完整度归零则失败。',
+      '【设置】主菜单与暂停面板可调整音效、音量、动态效果和自动下一波。',
       '',
-      '快捷键：1–4 选塔   U 升级   S 卖出   F 切换 1x/2x   Space/Esc 暂停   Esc 取消当前操作',
+      '快捷键：1/2/3/4 制造   U 升级   S 撤离   Q 技能   F 切换 1x–5x   Space/Esc 暂停   Esc 取消操作',
     ].join('\n');
 
     const bodyText = this.add.text(294, 166, body, {

@@ -1,0 +1,151 @@
+{
+  "steps": [
+    {
+      "name": "ui-layout",
+      "cards": 2,
+      "cardLabels": [
+        "机枪兵",
+        "喷火兵"
+      ],
+      "crystals": 220,
+      "ready": [],
+      "active": null,
+      "noOldTowerCards": true,
+      "tray": true
+    },
+    {
+      "name": "request-marine",
+      "crystals": 160,
+      "production": {
+        "active": {
+          "typeId": "marine",
+          "remaining": 1.366666666666669,
+          "duration": 2
+        },
+        "queue": [],
+        "ready": []
+      },
+      "sceneQueue": 0,
+      "active": {
+        "typeId": "marine",
+        "remaining": 1.3500000000000023,
+        "duration": 2
+      }
+    },
+    {
+      "name": "marine-ready",
+      "production": {
+        "active": null,
+        "queue": [],
+        "ready": [
+          "marine"
+        ]
+      }
+    },
+    {
+      "name": "marine-deployed",
+      "units": 1,
+      "type": "marine",
+      "ready": [],
+      "selected": {
+        "towerId": 1,
+        "typeId": "marine",
+        "level": 1,
+        "targetMode": "first",
+        "upgradeCost": 60,
+        "sellValue": 36,
+        "totalInvested": 60
+      },
+      "crystals": 160
+    },
+    {
+      "name": "marine-voice",
+      "selected": 1,
+      "type": "marine",
+      "audioRequests": []
+    },
+    {
+      "name": "audio-after-select",
+      "audioRequests": [
+        "http://127.0.0.1:5173/audio/voice/marine-deploy.wav",
+        "http://127.0.0.1:5173/audio/voice/marine-select.wav"
+      ]
+    },
+    {
+      "name": "firebat-ready",
+      "crystals": 40,
+      "production": {
+        "active": null,
+        "queue": [],
+        "ready": [
+          "firebat"
+        ]
+      }
+    },
+    {
+      "name": "firebat-deployed",
+      "units": [
+        "marine",
+        "firebat"
+      ],
+      "selected": {
+        "towerId": 2,
+        "typeId": "firebat",
+        "level": 1,
+        "targetMode": "first",
+        "upgradeCost": 100,
+        "sellValue": 72,
+        "totalInvested": 120
+      },
+      "ready": []
+    },
+    {
+      "name": "upgrade-firebat",
+      "before": {
+        "crystals": 40,
+        "level": 1
+      },
+      "afterCrystals": 40,
+      "level": 1
+    },
+    {
+      "name": "combat",
+      "phase": "wave",
+      "wave": 1,
+      "enemies": 3,
+      "projectiles": 0,
+      "units": [
+        {
+          "type": "marine",
+          "cooldown": 0.30000000000000004,
+          "target": 1
+        },
+        {
+          "type": "firebat",
+          "cooldown": -5.649999999999985,
+          "target": null
+        }
+      ],
+      "hud": {
+        "integrity": 20,
+        "maxIntegrity": 20,
+        "crystals": 46,
+        "wave": 1,
+        "totalWaves": 12,
+        "endless": false,
+        "kills": 1,
+        "enemiesRemaining": 7,
+        "speed": 1,
+        "paused": false,
+        "phase": "wave"
+      }
+    }
+  ],
+  "errors": [],
+  "audioRequests": [
+    "http://127.0.0.1:5173/audio/voice/marine-deploy.wav",
+    "http://127.0.0.1:5173/audio/voice/marine-select.wav",
+    "http://127.0.0.1:5173/audio/voice/firebat-deploy.wav",
+    "http://127.0.0.1:5173/audio/voice/firebat-select.wav"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "test": "Zerg enemy visuals with local StarCraft pack",
+  "date": "2026-11-07",
+  "viewport": { "width": 1280, "height": 720, "deviceScaleFactor": 1 },
+  "textures": {
+    "sc-enemy-zergling": true,
+    "sc-enemy-hydralisk": true,
+    "sc-enemy-lurker": true,
+    "sc-enemy-ultralisk": true
+  },
+  "wave1": {
+    "phase": "wave",
+    "wave": 1,
+    "enemies": 2,
+    "firstEnemy": {
+      "id": "scout",
+      "name": "跳虫",
+      "texture": "sc-enemy-zergling",
+      "scale": 0.78
+    }
+  },
+  "nextWavePreview": {
+    "wave": 1,
+    "icons": ["sc-enemy-zergling"]
+  },
+  "boss": {
+    "name": "雷兽",
+    "texture": "sc-enemy-ultralisk",
+    "scale": 1.55,
+    "bossBarVisible": true,
+    "bossBarName": "雷兽",
+    "ratio": 1
+  },
+  "screenshots": [
+    "artifacts/screenshots/102-zerg-wave.png",
+    "artifacts/screenshots/103-zerg-boss.png"
+  ],
+  "runtimeErrors": 0
+}
